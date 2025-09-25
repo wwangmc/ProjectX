@@ -14,7 +14,7 @@
 
 @interface TabBarController ()
 // Add a property to hold the Account nav controller
-@property (nonatomic, strong) UINavigationController *accountNavController;
+// @property (nonatomic, strong) UINavigationController *accountNavController;
 @property (nonatomic, strong) UILabel *networkStatusLabel;
 @property (nonatomic, strong) NSMutableDictionary *tabVerificationStatus; // Track which tabs have been verified
 @property (nonatomic, strong) NSMutableDictionary *tabLastVerificationTime; // Track when tabs were last verified
@@ -133,7 +133,7 @@
     SecurityTabViewController *securityVC = [[SecurityTabViewController alloc] init];
     SupportViewController *supportVC = [[SupportViewController alloc] init];
     supportVC.tabBarController = self;
-    AccountViewController *accountVC = [[AccountViewController alloc] init];
+    // AccountViewController *accountVC = [[AccountViewController alloc] init];
     
     // Wrap each view controller in a navigation controller
     UINavigationController *mapNav = [[UINavigationController alloc] initWithRootViewController:mapVC];
@@ -142,7 +142,7 @@
     UINavigationController *supportNav = [[UINavigationController alloc] initWithRootViewController:supportVC];
     
     // Create account nav controller but don't add it to tab bar
-    self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
+    // self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
     
     // Configure tab bar items (excluding account)
     mapNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Map" image:[UIImage systemImageNamed:@"map.fill"] tag:0];
@@ -201,22 +201,22 @@
 // but it's NOT in the tab bar directly - we present it modally instead
 - (void)switchToAccountTab {
     // For iPad, be extra cautious about UITabBarController inside UISplitViewController issues
-    if (self.isIPad) {
-        // For iPad, always present Account screen modally to avoid any SplitViewController issues
-        AccountViewController *accountVC = [[AccountViewController alloc] init];
-        UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:accountVC];
-        navController.modalPresentationStyle = UIModalPresentationFormSheet;
-        [self presentViewController:navController animated:YES completion:nil];
-        return;
-    }
+    // if (self.isIPad) {
+    //     // For iPad, always present Account screen modally to avoid any SplitViewController issues
+    //     AccountViewController *accountVC = [[AccountViewController alloc] init];
+    //     UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:accountVC];
+    //     navController.modalPresentationStyle = UIModalPresentationFormSheet;
+    //     [self presentViewController:navController animated:YES completion:nil];
+    //     return;
+    // }
     
     // Regular iPhone implementation - continue as before
-    if (!self.accountNavController) {
-        AccountViewController *accountVC = [[AccountViewController alloc] init];
-        self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
-    }
+    // if (!self.accountNavController) {
+    //     AccountViewController *accountVC = [[AccountViewController alloc] init];
+    //     self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
+    // }
     
-    [self presentViewController:self.accountNavController animated:YES completion:nil];
+    // [self presentViewController:self.accountNavController animated:YES completion:nil];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -257,10 +257,10 @@
     NSLog(@"[WeaponX] Checking authentication status at app startup");
     
     // If no auth token or user data or needs relogin flag is set, show login screen
-    if (!authToken || !userData || needsRelogin) {
-        NSLog(@"[WeaponX] No valid authentication found or relogin required, showing login screen");
-        [self presentLoginScreen];
-    } else {
+    // if (!authToken || !userData || needsRelogin) {
+    //     NSLog(@"[WeaponX] No valid authentication found or relogin required, showing login screen");
+    //     [self presentLoginScreen];
+    // } else {
         NSLog(@"[WeaponX] Valid authentication found, skipping login screen");
         
         // Check for valid subscription plan
@@ -280,7 +280,7 @@
                 }];
                 return;
             }
-        }
+        // }
         
         // User is already logged in, post notification to update any observers
         [[NSNotificationCenter defaultCenter] postNotificationName:@"WeaponXUserDidLogin" object:nil];
@@ -488,32 +488,32 @@
 // Add a new method to present the account view controller
 - (void)presentAccountViewController {
     // Safety check: make sure we have the account nav controller
-    if (!self.accountNavController) {
-        NSLog(@"[WeaponX] ⚠️ Cannot present account view - accountNavController is nil");
+    // if (!self.accountNavController) {
+    //     NSLog(@"[WeaponX] ⚠️ Cannot present account view - accountNavController is nil");
         
-        // Try to create it if it's nil
-        AccountViewController *accountVC = [[NSClassFromString(@"AccountViewController") alloc] init];
-        if (accountVC) {
-            self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
-        } else {
-            NSLog(@"[WeaponX] ❌ Critical error: Cannot create AccountViewController");
-            return;
-        }
-    }
+    //     // Try to create it if it's nil
+    //     AccountViewController *accountVC = [[NSClassFromString(@"AccountViewController") alloc] init];
+    //     if (accountVC) {
+    //         self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
+    //     } else {
+    //         NSLog(@"[WeaponX] ❌ Critical error: Cannot create AccountViewController");
+    //         return;
+    //     }
+    // }
     
-    // Safety check: make sure we're not already presenting it
-    if (self.presentedViewController == self.accountNavController) {
-        NSLog(@"[WeaponX] Account view already presented, not presenting again");
-        return;
-    }
+    // // Safety check: make sure we're not already presenting it
+    // if (self.presentedViewController == self.accountNavController) {
+    //     NSLog(@"[WeaponX] Account view already presented, not presenting again");
+    //     return;
+    // }
     
-    // Safety check: use try-catch to prevent crashes
-    @try {
-        NSLog(@"[WeaponX] 📱 Presenting account view controller modally");
-        [self presentViewController:self.accountNavController animated:YES completion:nil];
-    } @catch (NSException *exception) {
-        NSLog(@"[WeaponX] ❌ Exception while presenting account view: %@", exception.description);
-    }
+    // // Safety check: use try-catch to prevent crashes
+    // @try {
+    //     NSLog(@"[WeaponX] 📱 Presenting account view controller modally");
+    //     [self presentViewController:self.accountNavController animated:YES completion:nil];
+    // } @catch (NSException *exception) {
+    //     NSLog(@"[WeaponX] ❌ Exception while presenting account view: %@", exception.description);
+    // }
 }
 
 #pragma mark - UITabBarControllerDelegate
@@ -632,34 +632,34 @@
         }
         
         // We need to check if Layer 2 security denied access (which stored the result in Keychain)
-        NSDictionary *verification = [self getVerificationFromKeychainForTab:tabName];
-        if (verification && [verification[@"access_allowed"] boolValue] == NO) {
-            NSLog(@"[WeaponX] 🚫 LAYER 2: Blocked access to tab %@ based on stored verification", tabName);
+        // NSDictionary *verification = [self getVerificationFromKeychainForTab:tabName];
+        // if (verification && [verification[@"access_allowed"] boolValue] == NO) {
+        //     NSLog(@"[WeaponX] 🚫 LAYER 2: Blocked access to tab %@ based on stored verification", tabName);
             
-            // Show access denied alert with Subscribe button
-            dispatch_async(dispatch_get_main_queue(), ^{
-                UIAlertController *alert = [UIAlertController 
-                    alertControllerWithTitle:@"Access Denied" 
-                    message:@"This feature requires an active subscription. Please subscribe to a plan to access this feature."
-                    preferredStyle:UIAlertControllerStyleAlert];
+        //     // Show access denied alert with Subscribe button
+        //     dispatch_async(dispatch_get_main_queue(), ^{
+        //         UIAlertController *alert = [UIAlertController 
+        //             alertControllerWithTitle:@"Access Denied" 
+        //             message:@"This feature requires an active subscription. Please subscribe to a plan to access this feature."
+        //             preferredStyle:UIAlertControllerStyleAlert];
                 
-                [alert addAction:[UIAlertAction 
-                    actionWithTitle:@"Subscribe to Plan" 
-                    style:UIAlertActionStyleDefault 
-                    handler:^(UIAlertAction * _Nonnull action) {
-                        [self switchToAccountTab];
-                    }]];
+        //         [alert addAction:[UIAlertAction 
+        //             actionWithTitle:@"Subscribe to Plan" 
+        //             style:UIAlertActionStyleDefault 
+        //             handler:^(UIAlertAction * _Nonnull action) {
+        //                 [self switchToAccountTab];
+        //             }]];
                 
-                [alert addAction:[UIAlertAction 
-                    actionWithTitle:@"Cancel" 
-                    style:UIAlertActionStyleCancel 
-                    handler:nil]];
+        //         [alert addAction:[UIAlertAction 
+        //             actionWithTitle:@"Cancel" 
+        //             style:UIAlertActionStyleCancel 
+        //             handler:nil]];
                 
-                [self presentViewController:alert animated:YES completion:nil];
-            });
+        //         [self presentViewController:alert animated:YES completion:nil];
+        //     });
             
-            return NO;
-        }
+        //     return NO;
+        // }
         
         // If we made it here, access is allowed - save the verification time
         NSDate *now = [NSDate date];
@@ -681,49 +681,49 @@
     }
     
     // Apply Layer 1 restrictions if needed
-    if (isRestricted) {
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    // if (isRestricted) {
+    //     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         
-        // Only allow Support tab (index 3) and Account tab (index 4) for restricted users
-        if (selectedIndex == 0 || selectedIndex == 1 || selectedIndex == 2) {
-            NSLog(@"[WeaponX] 🚫 Blocked access to restricted tab %ld", (long)selectedIndex);
+    //     // Only allow Support tab (index 3) and Account tab (index 4) for restricted users
+    //     if (selectedIndex == 0 || selectedIndex == 1 || selectedIndex == 2) {
+    //         NSLog(@"[WeaponX] 🚫 Blocked access to restricted tab %ld", (long)selectedIndex);
             
-            // Add detailed diagnostics
-            BOOL hasActivePlan = [defaults boolForKey:@"WeaponXHasActivePlan"];
-            BOOL planIsValid = [[APIManager sharedManager] verifyPlanDataIntegrity];
-            NSLog(@"[WeaponX] 🔍 Restriction diagnostic - HasActivePlan: %@, PlanIsValid: %@",
-                  hasActivePlan ? @"YES" : @"NO", planIsValid ? @"YES" : @"NO");
+    //         // Add detailed diagnostics
+    //         BOOL hasActivePlan = [defaults boolForKey:@"WeaponXHasActivePlan"];
+    //         BOOL planIsValid = [[APIManager sharedManager] verifyPlanDataIntegrity];
+    //         NSLog(@"[WeaponX] 🔍 Restriction diagnostic - HasActivePlan: %@, PlanIsValid: %@",
+    //               hasActivePlan ? @"YES" : @"NO", planIsValid ? @"YES" : @"NO");
             
-            // Attempt recovery if plan should be active
-            if (hasActivePlan && planIsValid) {
-                NSLog(@"[WeaponX] 🔧 Auto-fixing restriction state during tab selection");
-                [self removeAccessRestrictions];
-                return YES; // Allow access
-            }
+    //         // Attempt recovery if plan should be active
+    //         if (hasActivePlan && planIsValid) {
+    //             NSLog(@"[WeaponX] 🔧 Auto-fixing restriction state during tab selection");
+    //             [self removeAccessRestrictions];
+    //             return YES; // Allow access
+    //         }
             
-            // Create an alert
-            UIAlertController *alert = [UIAlertController 
-                alertControllerWithTitle:@"Access Restricted" 
-                message:@"Please subscribe to a plan to access this feature." 
-                preferredStyle:UIAlertControllerStyleAlert];
+    //         // Create an alert
+    //         UIAlertController *alert = [UIAlertController 
+    //             alertControllerWithTitle:@"Access Restricted" 
+    //             message:@"Please subscribe to a plan to access this feature." 
+    //             preferredStyle:UIAlertControllerStyleAlert];
             
-            [alert addAction:[UIAlertAction 
-                actionWithTitle:@"View Plans" 
-                style:UIAlertActionStyleDefault 
-                handler:^(UIAlertAction * _Nonnull action) {
-                    [self switchToAccountTab];
-                }]];
+    //         [alert addAction:[UIAlertAction 
+    //             actionWithTitle:@"View Plans" 
+    //             style:UIAlertActionStyleDefault 
+    //             handler:^(UIAlertAction * _Nonnull action) {
+    //                 [self switchToAccountTab];
+    //             }]];
             
-            // Add a cancel button
-            [alert addAction:[UIAlertAction 
-                actionWithTitle:@"Cancel" 
-                style:UIAlertActionStyleCancel 
-                handler:nil]];
+    //         // Add a cancel button
+    //         [alert addAction:[UIAlertAction 
+    //             actionWithTitle:@"Cancel" 
+    //             style:UIAlertActionStyleCancel 
+    //             handler:nil]];
             
-            [self presentViewController:alert animated:YES completion:nil];
-            return NO;
-        }
-    }
+    //         [self presentViewController:alert animated:YES completion:nil];
+    //         return NO;
+    //     }
+    // }
     
     return YES;
 }

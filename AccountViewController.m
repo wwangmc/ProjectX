@@ -171,7 +171,7 @@ __attribute__((constructor)) static void AccountViewDirectFix(void) {
     }
     
     // Start checking internet connectivity
-    [self startConnectivityTimer];
+    // [self startConnectivityTimer];
     
     // Add observers for network status changes and UI refresh notifications
     [[NSNotificationCenter defaultCenter] addObserver:self 
@@ -465,56 +465,7 @@ __attribute__((constructor)) static void AccountViewDirectFix(void) {
 }
 
 - (void)updateConnectionStatusWithState:(BOOL)isConnected pingTime:(NSTimeInterval)pingTime {
-    // Store the ping time
-    self.lastPingTime = pingTime;
-    
-    // Update label text based on connection state
-    if (isConnected) {
-        // Check if ping is high (poor connection)
-        if (pingTime > 1500) {
-            self.connectionStatusLabel.text = [NSString stringWithFormat:@"Connected: %.0f ms (Poor Connection)", pingTime];
-            
-            // Set text color to yellow/orange for poor connection
-            if (@available(iOS 13.0, *)) {
-                self.connectionStatusLabel.textColor = [UIColor systemYellowColor];
-            } else {
-                self.connectionStatusLabel.textColor = [UIColor colorWithRed:1.0 green:0.8 blue:0.0 alpha:1.0];
-            }
-        } else {
-            // Normal good connection
-            self.connectionStatusLabel.text = [NSString stringWithFormat:@"Connected: %.0f ms", pingTime];
-            
-            // Set text color to green for connected state
-            if (@available(iOS 13.0, *)) {
-                self.connectionStatusLabel.textColor = [UIColor systemGreenColor];
-            } else {
-                self.connectionStatusLabel.textColor = [UIColor colorWithRed:0.0 green:0.8 blue:0.2 alpha:1.0];
-            }
-        }
-        
-        // Use standard font size for connected status
-        self.connectionStatusLabel.font = [UIFont fontWithName:@"Menlo" size:14.0] ?: [UIFont systemFontOfSize:14.0];
-    } else {
-        self.connectionStatusLabel.text = @"Offline: Use internet for accessing account info";
-        
-        // Set text color to red for offline state
-        if (@available(iOS 13.0, *)) {
-            self.connectionStatusLabel.textColor = [UIColor systemRedColor];
-        } else {
-            self.connectionStatusLabel.textColor = [UIColor colorWithRed:0.9 green:0.2 blue:0.2 alpha:1.0];
-        }
-        
-        // Use smaller font size for offline status message
-        self.connectionStatusLabel.font = [UIFont fontWithName:@"Menlo" size:11.0] ?: [UIFont systemFontOfSize:11.0];
-    }
-    
-    // Resize label to fit new text
-    [self.connectionStatusLabel sizeToFit];
-    
-    // Add padding
-    CGRect frame = self.connectionStatusLabel.frame;
-    frame.size.width += 20;
-    self.connectionStatusLabel.frame = frame;
+
 }
 
 #pragma mark - UI Setup
@@ -686,7 +637,7 @@ __attribute__((constructor)) static void AccountViewDirectFix(void) {
     
     // Login subtitle with adaptive styling
     UILabel *loginSubtitle = [[UILabel alloc] init];
-    loginSubtitle.text = @"AUTHORIZATION REQUIRED";
+    loginSubtitle.text = @"登陆";
     loginSubtitle.font = [UIFont fontWithName:@"Menlo" size:14.0] ?: [UIFont systemFontOfSize:14.0];
     if (@available(iOS 13.0, *)) {
         loginSubtitle.textColor = [UIColor secondaryLabelColor];

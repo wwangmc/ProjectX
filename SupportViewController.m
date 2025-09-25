@@ -125,7 +125,6 @@
     self.hasShownOfflineAlert = NO;
     
     // Check internet connectivity before loading data
-    [self checkInternetConnectivity];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -141,62 +140,7 @@
 #pragma mark - Internet Connectivity
 
 - (void)checkInternetConnectivity {
-    // Cancel any existing task
-    if (self.connectivityTask) {
-        [self.connectivityTask cancel];
-    }
-    
-    // Get base URL from API Manager
-    NSString *baseURL = nil;
-    @try {
-        baseURL = [[APIManager sharedManager] baseURL];
-    } @catch (NSException *exception) {
-        [self handleOfflineState];
-        return;
-    }
-    
-    if (!baseURL) {
-        [self handleOfflineState];
-        return;
-    }
-    
-    // Create a URL for connectivity check
-    NSURL *url = [NSURL URLWithString:baseURL];
-    if (!url) {
-        [self handleOfflineState];
-        return;
-    }
-    
-    // Create and start request
-    NSURLRequest *request = [NSURLRequest requestWithURL:url 
-                                            cachePolicy:NSURLRequestReloadIgnoringLocalCacheData 
-                                        timeoutInterval:4.0];
-    
-    // Use a weak reference to self to avoid retain cycles
-    __weak typeof(self) weakSelf = self;
-    
-    self.connectivityTask = [[NSURLSession sharedSession] dataTaskWithRequest:request 
-                                                           completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        // Get back to main thread
-        dispatch_async(dispatch_get_main_queue(), ^{
-            __strong typeof(weakSelf) strongSelf = weakSelf;
-            if (!strongSelf) return;
-            
-            if (error) {
-                [strongSelf handleOfflineState];
-                return;
-            }
-            
-            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-            if (httpResponse.statusCode >= 200 && httpResponse.statusCode < 300) {
-                [strongSelf handleOnlineState];
-            } else {
-                [strongSelf handleOfflineState];
-            }
-        });
-    }];
-    
-    [self.connectivityTask resume];
+
 }
 
 - (void)handleOnlineState {
@@ -205,39 +149,15 @@
 }
 
 - (void)handleOfflineState {
-    // Only show the alert once per tab open
-    if (!self.hasShownOfflineAlert) {
-        [self showOfflineAlert];
-        self.hasShownOfflineAlert = YES;
-    }
-    
-    // Update UI to show offline state
-    [self updateUIForOfflineState];
+
 }
 
 - (void)showOfflineAlert {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Offline" 
-                                                               message:@"Use internet for accessing support features" 
-                                                        preferredStyle:UIAlertControllerStyleAlert];
-    
-    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-    
-    [self presentViewController:alert animated:YES completion:nil];
+
 }
 
 - (void)updateUIForOfflineState {
-    // Stop loading indicators
-    [self.broadcastsLoadingIndicator stopAnimating];
-    [self.ticketsLoadingIndicator stopAnimating];
-    [self.broadcastRefreshControl endRefreshing];
-    [self.ticketsRefreshControl endRefreshing];
-    
-    // Show offline messages
-    self.noBroadcastsLabel.text = @"Offline: Use internet for accessing broadcasts";
-    self.noBroadcastsLabel.hidden = NO;
-    
-    self.noTicketsLabel.text = @"Offline: Use internet for accessing support tickets";
-    self.noTicketsLabel.hidden = NO;
+
 }
 
 - (void)setupUI {

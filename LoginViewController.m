@@ -94,7 +94,7 @@
     
     // Subtitle Label with hacker theme
     UILabel *subtitleLabel = [[UILabel alloc] init];
-    subtitleLabel.text = @"AUTHORIZATION REQUIRED";
+    subtitleLabel.text = @"登陆";
     subtitleLabel.font = [UIFont fontWithName:@"Menlo" size:14.0] ?: [UIFont systemFontOfSize:14.0];
     subtitleLabel.textColor = [UIColor colorWithRed:0.7 green:0.7 blue:0.7 alpha:1.0]; // Light gray
     subtitleLabel.textAlignment = NSTextAlignmentCenter;

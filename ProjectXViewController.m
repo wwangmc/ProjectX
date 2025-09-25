@@ -655,14 +655,14 @@
     
     if (tableView == self.installedAppsTableView) {
         // Restrict adding if user has no plan
-        if (![[APIManager sharedManager] userHasPlan]) {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
-                                                                           message:@"You need an active plan to add apps to scope."
-                                                                    preferredStyle:UIAlertControllerStyleAlert];
-            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-            [self presentViewController:alert animated:YES completion:nil];
-            return;
-        }
+        // if (![[APIManager sharedManager] userHasPlan]) {
+        //     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
+        //                                                                    message:@"You need an active plan to add apps to scope."
+        //                                                             preferredStyle:UIAlertControllerStyleAlert];
+        //     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+        //     [self presentViewController:alert animated:YES completion:nil];
+        //     return;
+        // }
         // Handle installed apps selection
         NSDictionary *selectedApp = self.filteredApps[indexPath.row];
         NSString *bundleID = selectedApp[@"bundleID"];
@@ -706,14 +706,14 @@
             UIAlertAction *addWithExtensionsAction = [UIAlertAction actionWithTitle:@"Add with Extensions"
                                                                             style:UIAlertActionStyleDefault
                                                                           handler:^(UIAlertAction * _Nonnull action) {
-                if (![[APIManager sharedManager] userHasPlan]) {
-                    UIAlertController *planAlert = [UIAlertController alertControllerWithTitle:@"Plan Required"
-                                                                                      message:@"You need an active plan to add apps with extensions to scope."
-                                                                               preferredStyle:UIAlertControllerStyleAlert];
-                    [planAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-                    [self presentViewController:planAlert animated:YES completion:nil];
-                    return;
-                }
+                // if (![[APIManager sharedManager] userHasPlan]) {
+                //     UIAlertController *planAlert = [UIAlertController alertControllerWithTitle:@"Plan Required"
+                //                                                                       message:@"You need an active plan to add apps with extensions to scope."
+                //                                                                preferredStyle:UIAlertControllerStyleAlert];
+                //     [planAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                //     [self presentViewController:planAlert animated:YES completion:nil];
+                //     return;
+                // }
                 [self addApplicationWithExtensionsToScope:bundleID];
             }];
             
@@ -1967,14 +1967,14 @@
 }
 
 - (void)addAppButtonTapped:(UIButton *)sender {
-    if (![[APIManager sharedManager] userHasPlan]) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
-                                                                       message:@"You need an active plan to add apps to scope."
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
-        return;
-    }
+    // if (![[APIManager sharedManager] userHasPlan]) {
+    //     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
+    //                                                                    message:@"You need an active plan to add apps to scope."
+    //                                                             preferredStyle:UIAlertControllerStyleAlert];
+    //     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+    //     [self presentViewController:alert animated:YES completion:nil];
+    //     return;
+    // }
     NSString *bundleID = self.bundleIDTextField.text;
     if (!bundleID.length) {
         [self showError:[NSError errorWithDomain:@"com.hydra.projectx" 
@@ -2034,31 +2034,31 @@
     }
     
     // If user doesn't have an active plan, show alert and prevent action
-    if (isRestricted) {
-        UIAlertController *alert = [UIAlertController 
-            alertControllerWithTitle:@"Access Restricted" 
-            message:@"Please subscribe to a plan to use the generate feature." 
-            preferredStyle:UIAlertControllerStyleAlert];
+    // if (isRestricted) {
+    //     UIAlertController *alert = [UIAlertController 
+    //         alertControllerWithTitle:@"Access Restricted" 
+    //         message:@"Please subscribe to a plan to use the generate feature." 
+    //         preferredStyle:UIAlertControllerStyleAlert];
         
-        [alert addAction:[UIAlertAction 
-            actionWithTitle:@"View Plans" 
-            style:UIAlertActionStyleDefault 
-            handler:^(UIAlertAction * _Nonnull action) {
-                // Switch to account tab to view plans
-                UITabBarController *tabController = [self findTabBarController];
-                if ([tabController respondsToSelector:@selector(switchToAccountTab)]) {
-                    [tabController performSelector:@selector(switchToAccountTab)];
-                }
-            }]];
+    //     [alert addAction:[UIAlertAction 
+    //         actionWithTitle:@"View Plans" 
+    //         style:UIAlertActionStyleDefault 
+    //         handler:^(UIAlertAction * _Nonnull action) {
+    //             // Switch to account tab to view plans
+    //             UITabBarController *tabController = [self findTabBarController];
+    //             if ([tabController respondsToSelector:@selector(switchToAccountTab)]) {
+    //                 [tabController performSelector:@selector(switchToAccountTab)];
+    //             }
+    //         }]];
         
-        [alert addAction:[UIAlertAction 
-            actionWithTitle:@"Cancel" 
-            style:UIAlertActionStyleCancel 
-            handler:nil]];
+    //     [alert addAction:[UIAlertAction 
+    //         actionWithTitle:@"Cancel" 
+    //         style:UIAlertActionStyleCancel 
+    //         handler:nil]];
         
-        [self presentViewController:alert animated:YES completion:nil];
-        return;
-    }
+    //     [self presentViewController:alert animated:YES completion:nil];
+    //     return;
+    // }
     
     // Determine which identifier type based on the button's tag
     NSString *identifierType;
@@ -3137,31 +3137,31 @@
     }
     
     // If user doesn't have an active plan, show alert and prevent action
-    if (isRestricted) {
-        UIAlertController *alert = [UIAlertController 
-            alertControllerWithTitle:@"Access Restricted" 
-            message:@"Please subscribe to a plan to use the generate feature." 
-            preferredStyle:UIAlertControllerStyleAlert];
+    // if (isRestricted) {
+    //     UIAlertController *alert = [UIAlertController 
+    //         alertControllerWithTitle:@"Access Restricted" 
+    //         message:@"Please subscribe to a plan to use the generate feature." 
+    //         preferredStyle:UIAlertControllerStyleAlert];
         
-        [alert addAction:[UIAlertAction 
-            actionWithTitle:@"View Plans" 
-            style:UIAlertActionStyleDefault 
-            handler:^(UIAlertAction * _Nonnull action) {
-                // Switch to account tab to view plans
-                UITabBarController *tabController = [self findTabBarController];
-                if ([tabController respondsToSelector:@selector(switchToAccountTab)]) {
-                    [tabController performSelector:@selector(switchToAccountTab)];
-                }
-            }]];
+    //     [alert addAction:[UIAlertAction 
+    //         actionWithTitle:@"View Plans" 
+    //         style:UIAlertActionStyleDefault 
+    //         handler:^(UIAlertAction * _Nonnull action) {
+    //             // Switch to account tab to view plans
+    //             UITabBarController *tabController = [self findTabBarController];
+    //             if ([tabController respondsToSelector:@selector(switchToAccountTab)]) {
+    //                 [tabController performSelector:@selector(switchToAccountTab)];
+    //             }
+    //         }]];
         
-        [alert addAction:[UIAlertAction 
-            actionWithTitle:@"Cancel" 
-            style:UIAlertActionStyleCancel 
-            handler:nil]];
+    //     [alert addAction:[UIAlertAction 
+    //         actionWithTitle:@"Cancel" 
+    //         style:UIAlertActionStyleCancel 
+    //         handler:nil]];
         
-        [self presentViewController:alert animated:YES completion:nil];
-        return;
-    }
+    //     [self presentViewController:alert animated:YES completion:nil];
+    //     return;
+    // }
     
     // Disable button temporarily
     sender.enabled = NO;
@@ -3306,152 +3306,6 @@
 
 // Trial offer banner methods
 - (void)setupTrialOfferBanner {
-    // Check if we should show the offer
-    BOOL shouldShow = [self shouldShowTrialOffer];
-    
-    if (!shouldShow) {
-        return;
-    }
-    
-    // Check if banner already exists - don't create duplicates
-    if (self.trialOfferBannerView) {
-        return;
-    }
-    
-    // Create the banner view with futuristic design
-    self.trialOfferBannerView = [[UIView alloc] init];
-    self.trialOfferBannerView.translatesAutoresizingMaskIntoConstraints = NO;
-    self.trialOfferBannerView.layer.cornerRadius = 16.0;
-    self.trialOfferBannerView.clipsToBounds = YES;
-    
-    // Create gradient background
-    CAGradientLayer *gradientLayer = [CAGradientLayer layer];
-    gradientLayer.frame = CGRectMake(0, 0, self.view.bounds.size.width - 40, 120);
-    gradientLayer.startPoint = CGPointMake(0.0, 0.0);
-    gradientLayer.endPoint = CGPointMake(1.0, 1.0);
-    
-    // Use system colors that adapt to light/dark mode
-    if (@available(iOS 13.0, *)) {
-        UIColor *startColor = [UIColor systemBlueColor];
-        UIColor *endColor = [UIColor systemIndigoColor];
-        gradientLayer.colors = @[
-            (id)[startColor colorWithAlphaComponent:0.9].CGColor,
-            (id)[endColor colorWithAlphaComponent:0.9].CGColor
-        ];
-    } else {
-        gradientLayer.colors = @[
-            (id)[[UIColor colorWithRed:0.0 green:0.5 blue:1.0 alpha:0.9] CGColor],
-            (id)[[UIColor colorWithRed:0.3 green:0.2 blue:0.8 alpha:0.9] CGColor]
-        ];
-    }
-    
-    [self.trialOfferBannerView.layer insertSublayer:gradientLayer atIndex:0];
-    
-    // Create content container
-    UIView *contentContainer = [[UIView alloc] init];
-    contentContainer.translatesAutoresizingMaskIntoConstraints = NO;
-    contentContainer.backgroundColor = [UIColor clearColor];
-    [self.trialOfferBannerView addSubview:contentContainer];
-    
-    // Create title label with glow effect
-    UILabel *titleLabel = [[UILabel alloc] init];
-    titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    titleLabel.text = @"SPECIAL OFFER";
-    titleLabel.font = [UIFont boldSystemFontOfSize:18];
-    titleLabel.textColor = [UIColor whiteColor];
-    titleLabel.textAlignment = NSTextAlignmentCenter;
-    
-    // Add subtle shadow for glow effect
-    titleLabel.layer.shadowColor = [UIColor whiteColor].CGColor;
-    titleLabel.layer.shadowOffset = CGSizeZero;
-    titleLabel.layer.shadowRadius = 10.0;
-    titleLabel.layer.shadowOpacity = 0.4;
-    [contentContainer addSubview:titleLabel];
-    
-    // Create subtitle label
-    UILabel *subtitleLabel = [[UILabel alloc] init];
-    subtitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    subtitleLabel.text = @"Experience all features with our free trial plan!";
-    subtitleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
-    subtitleLabel.textColor = [UIColor whiteColor];
-    subtitleLabel.textAlignment = NSTextAlignmentCenter;
-    subtitleLabel.numberOfLines = 0;
-    [contentContainer addSubview:subtitleLabel];
-    
-    // Create get trial button with modern style
-    self.getTrialButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.getTrialButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.getTrialButton setTitle:@"GET TRIAL" forState:UIControlStateNormal];
-    [self.getTrialButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    self.getTrialButton.titleLabel.font = [UIFont boldSystemFontOfSize:16];
-    
-    // Create pillbox shape with glassy background
-    self.getTrialButton.layer.cornerRadius = 18.0;
-    self.getTrialButton.clipsToBounds = YES;
-    
-    // Glassy background
-    self.getTrialButton.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.3];
-    
-    // Add highlight effect
-    UIView *highlightView = [[UIView alloc] init];
-    highlightView.translatesAutoresizingMaskIntoConstraints = NO;
-    highlightView.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.2];
-    highlightView.layer.cornerRadius = 18.0;
-    highlightView.clipsToBounds = YES;
-    highlightView.userInteractionEnabled = NO;
-    
-    // Create inner shadow for button
-    CALayer *innerShadow = [CALayer layer];
-    innerShadow.frame = CGRectMake(0, 0, 140, 36);
-    innerShadow.shadowColor = [UIColor colorWithWhite:1.0 alpha:0.5].CGColor;
-    innerShadow.shadowOffset = CGSizeMake(0, 1);
-    innerShadow.shadowOpacity = 0.5;
-    innerShadow.shadowRadius = 3;
-    
-    // Set action for button
-    [self.getTrialButton addTarget:self action:@selector(getTrialButtonTapped) forControlEvents:UIControlEventTouchUpInside];
-    
-    [contentContainer addSubview:self.getTrialButton];
-    [self.getTrialButton addSubview:highlightView];
-    
-    // Add the banner to the view hierarchy at the top
-    if (self.mainStackView && self.mainStackView.arrangedSubviews.count > 0) {
-        [self.mainStackView insertArrangedSubview:self.trialOfferBannerView atIndex:0];
-    } else {
-        return;
-    }
-    
-    // Set up constraints
-    [NSLayoutConstraint activateConstraints:@[
-        // Content container constraints
-        [contentContainer.topAnchor constraintEqualToAnchor:self.trialOfferBannerView.topAnchor],
-        [contentContainer.leadingAnchor constraintEqualToAnchor:self.trialOfferBannerView.leadingAnchor],
-        [contentContainer.trailingAnchor constraintEqualToAnchor:self.trialOfferBannerView.trailingAnchor],
-        [contentContainer.bottomAnchor constraintEqualToAnchor:self.trialOfferBannerView.bottomAnchor],
-        
-        // Title label constraints
-        [titleLabel.topAnchor constraintEqualToAnchor:contentContainer.topAnchor constant:16],
-        [titleLabel.leadingAnchor constraintEqualToAnchor:contentContainer.leadingAnchor constant:16],
-        [titleLabel.trailingAnchor constraintEqualToAnchor:contentContainer.trailingAnchor constant:-16],
-        
-        // Subtitle label constraints
-        [subtitleLabel.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8],
-        [subtitleLabel.leadingAnchor constraintEqualToAnchor:contentContainer.leadingAnchor constant:16],
-        [subtitleLabel.trailingAnchor constraintEqualToAnchor:contentContainer.trailingAnchor constant:-16],
-        
-        // Get trial button constraints
-        [self.getTrialButton.topAnchor constraintEqualToAnchor:subtitleLabel.bottomAnchor constant:12],
-        [self.getTrialButton.centerXAnchor constraintEqualToAnchor:contentContainer.centerXAnchor],
-        [self.getTrialButton.widthAnchor constraintEqualToConstant:140],
-        [self.getTrialButton.heightAnchor constraintEqualToConstant:36],
-        [self.getTrialButton.bottomAnchor constraintEqualToAnchor:contentContainer.bottomAnchor constant:-16],
-        
-        // Highlight view constraints (partial overlay for glass effect)
-        [highlightView.topAnchor constraintEqualToAnchor:self.getTrialButton.topAnchor],
-        [highlightView.leadingAnchor constraintEqualToAnchor:self.getTrialButton.leadingAnchor],
-        [highlightView.trailingAnchor constraintEqualToAnchor:self.getTrialButton.trailingAnchor],
-        [highlightView.heightAnchor constraintEqualToConstant:18], // Half height for highlight
-    ]];
 }
 
 // Method to reset trial offer status for testing
@@ -4623,14 +4477,14 @@ else if ([identifierType isEqualToString:@"AppContainerUUID"])
 }
 
 - (void)addApplicationWithExtensionsToScope:(NSString *)bundleID {
-    if (![[APIManager sharedManager] userHasPlan]) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
-                                                                       message:@"You need an active plan to add apps with extensions to scope."
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-        [self presentViewController:alert animated:YES completion:nil];
-        return;
-    }
+    // if (![[APIManager sharedManager] userHasPlan]) {
+    //     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
+    //                                                                    message:@"You need an active plan to add apps with extensions to scope."
+    //                                                             preferredStyle:UIAlertControllerStyleAlert];
+    //     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+    //     [self presentViewController:alert animated:YES completion:nil];
+    //     return;
+    // }
     if (!bundleID) return;
     
     // Get the app proxy
