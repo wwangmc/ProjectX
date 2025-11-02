@@ -1,8 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "ProjectX.h"
 #import "TabBarController.h"
-#import "APIManager.h"
-#import "SupportViewController.h"
 #import <UserNotifications/UserNotifications.h>
 #import "AppDataCleaner.h"
 
@@ -27,14 +25,7 @@ extern void StartWeaponXGuardian(void);
     self.window.rootViewController = tabBarController;
     [self.window makeKeyAndVisible];
     
-    // Check for existing plan data and verify integrity
-    [self performSecurityChecksAtLaunch];
     
-    // Add special check for inconsistent plan data
-    [self checkForInconsistentPlanData];
-    
-    // Start heartbeat for online presence when app launches
-    [self startHeartbeatIfLoggedIn];
     
     // Register for push notifications after a delay, not during initial launch
     // This prevents the permission prompt from showing immediately on launch
@@ -60,11 +51,6 @@ extern void StartWeaponXGuardian(void);
         [tabBarController checkAuthenticationStatus];
     }
     
-    // Special check for inconsistent plan data when resuming from recents
-    [self checkForInconsistentPlanData];
-    
-    // Restart heartbeat when app enters foreground
-    [self startHeartbeatIfLoggedIn];
     
     // Reset the resuming flag after a delay to ensure it's used by all components
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
@@ -88,9 +74,6 @@ extern void StartWeaponXGuardian(void);
         [tabBarController checkAuthenticationStatus];
     }
     
-    // Ensure heartbeat is active when app becomes active
-    [self startHeartbeatIfLoggedIn];
-    
     // Add a delay before resetting the flag to avoid rapid rechecks
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         isCheckingAuth = NO;
@@ -98,29 +81,12 @@ extern void StartWeaponXGuardian(void);
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
-    // Clean up when the app is about to terminate
-    
-    // Stop heartbeat
-    [[APIManager sharedManager] stopHeartbeat];
     
     // Clean up notification center if needed
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-// Helper method to start heartbeat if user is logged in
-- (void)startHeartbeatIfLoggedIn {
-    // Get the stored user ID
-    NSString *userId = [[NSUserDefaults standardUserDefaults] objectForKey:@"WeaponXServerUserId"];
-    NSString *token = [[NSUserDefaults standardUserDefaults] objectForKey:@"WeaponXAuthToken"];
-    
-    // Only start heartbeat if we have a valid user ID and token
-    if (userId && userId.length > 0 && token && token.length > 0) {
-        [[APIManager sharedManager] startHeartbeat:userId];
-        
-        // Set up notification observers for tracking screen changes
-        [self setupScreenChangeTracking];
-    }
-}
+
 
 // Example of screen tracking functionality
 - (void)setupScreenChangeTracking {
@@ -275,12 +241,7 @@ extern void StartWeaponXGuardian(void);
 
 // Helper method to use APIManager's setCurrentScreen method if it exists
 - (void)updateCurrentScreen:(NSString *)screenName {
-    // Check if the APIManager responds to setCurrentScreen: before calling it
-    APIManager *apiManager = [APIManager sharedManager];
-    
-    if ([apiManager respondsToSelector:@selector(setCurrentScreen:)]) {
-        [apiManager performSelector:@selector(setCurrentScreen:) withObject:screenName];
-    }
+
 }
 
 // Helper method to get the top most view controller
@@ -346,242 +307,6 @@ extern void StartWeaponXGuardian(void);
     }
 }
 
-// New method to perform security checks at launch
-- (void)performSecurityChecksAtLaunch {
-    // Check if the device is jailbroken (basic detection)
-    if ([self isDeviceJailbroken]) {
-        // You could add additional security measures here if desired
-    }
-    
-    // Check authentication and plan status
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *authToken = [defaults objectForKey:@"WeaponXAuthToken"];
-    
-    if (authToken) {
-        // Check if we're offline
-        BOOL isOffline = ![[APIManager sharedManager] isNetworkAvailable];
-        
-        // Verify plan data integrity immediately
-        BOOL planDataValid = [[APIManager sharedManager] verifyPlanDataIntegrity];
-        
-        if (!planDataValid) {
-            // If plan data is invalid and we're online, try to refresh it
-            if (!isOffline) {
-                [[APIManager sharedManager] refreshUserPlan];
-            } else {
-                // Set a flag to remind us to check when back online
-                [defaults setBool:YES forKey:@"WeaponXNeedsReVerification"];
-                [defaults synchronize];
-                
-                // Restrict access to account tab only
-                TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-                if ([tabBarController isKindOfClass:[TabBarController class]]) {
-                    [tabBarController restrictAccessToAccountTabOnly:YES];
-                }
-            }
-        } else {
-            // If we're online and need to re-verify, do it now
-            if (!isOffline && [defaults boolForKey:@"WeaponXNeedsReVerification"]) {
-                [[APIManager sharedManager] refreshUserPlan];
-            }
-        }
-    }
-}
-
-// New method to check for and fix inconsistent plan data
-- (void)checkForInconsistentPlanData {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    BOOL isOnline = [[APIManager sharedManager] isNetworkAvailable];
-    
-    // Check if the user explicitly has no plan
-    NSString *planName = [defaults objectForKey:@"UserPlanName"];
-    if (planName && [planName isEqualToString:@"NO_PLAN"]) {
-        // Double check if there's plan data that contradicts this
-        NSDictionary *planData = [defaults objectForKey:@"WeaponXUserPlan"];
-        if (planData && [planData[@"has_plan"] boolValue]) {
-            // If plan data is invalid and we're online, try to refresh it
-            if (!isOnline) {
-                NSLog(@"[WeaponX] 🔄 Plan data invalid but offline - attempting to refresh plan data");
-                [[APIManager sharedManager] refreshUserPlan];
-            } else {
-                NSLog(@"[WeaponX] ⚠️ Plan data invalid and online - restricting access");
-                // Set a flag to remind us to check when back online
-                [defaults setBool:YES forKey:@"WeaponXNeedsReVerification"];
-                [defaults synchronize];
-                
-                // Restrict access to account tab only
-                TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-                if ([tabBarController isKindOfClass:[TabBarController class]]) {
-                    [tabBarController restrictAccessToAccountTabOnly:YES];
-                }
-            }
-        } else {
-            NSLog(@"[WeaponX] User has no plan, skipping inconsistency check");
-            return;
-        }
-    }
-    
-    // Get all plan-related data
-    NSDictionary *planData = [defaults objectForKey:@"WeaponXUserPlan"];
-    NSString *planHash = [defaults objectForKey:@"WeaponXUserPlanHash"];
-    NSDate *lastVerifiedDate = [defaults objectForKey:@"WeaponXUserPlanTimestamp"];
-    BOOL hadActivePlan = [defaults boolForKey:@"WeaponXHasActivePlan"];
-    
-    // Check for inconsistencies
-    BOOL hasInconsistentData = NO;
-    
-    // Case 1: We have a plan name but no actual plan data or hash
-    if (planName && ![planName isEqualToString:@"NO_PLAN"] && 
-       (!planData || !planHash)) {
-        NSLog(@"[WeaponX] ⚠️ Inconsistent plan data detected: Have plan name but missing plan data or hash");
-        
-        // Check if we're offline but within grace period
-        if (!isOnline && hadActivePlan && lastVerifiedDate) {
-            NSTimeInterval timeElapsed = [[NSDate date] timeIntervalSinceDate:lastVerifiedDate];
-            NSTimeInterval maxOfflineTime = 24 * 60 * 60; // 24 hours in seconds
-            
-            if (timeElapsed <= maxOfflineTime) {
-                NSLog(@"[WeaponX] 📱 Offline but within grace period - not treating plan name/data mismatch as inconsistent");
-                return;
-            }
-        }
-        
-        hasInconsistentData = YES;
-    }
-    
-    // Case 2: We have plan data but no name or wrong name
-    if (planData) {
-        NSString *correctName = nil;
-        BOOL shouldHaveName = NO;
-        
-        // Determine the correct plan name from the data
-        if (planData[@"has_plan"] != nil && ![planData[@"has_plan"] boolValue]) {
-            correctName = @"NO_PLAN";
-            shouldHaveName = YES;
-        } else if (planData[@"plan"] && [planData[@"plan"] isKindOfClass:[NSDictionary class]]) {
-            NSDictionary *plan = planData[@"plan"];
-            if (plan[@"name"]) {
-                correctName = plan[@"name"];
-                shouldHaveName = YES;
-            }
-        }
-        
-        // Check if the name doesn't match what we expect
-        if (shouldHaveName && correctName) {
-            if (!planName || ![correctName isEqualToString:planName]) {
-                NSLog(@"[WeaponX] ⚠️ Inconsistent plan data detected: Plan name doesn't match plan data");
-                NSLog(@"[WeaponX] ℹ️ Auto-fixing inconsistent plan name from plan data: %@ -> %@", 
-                      planName ?: @"<nil>", correctName);
-                [defaults setObject:correctName forKey:@"UserPlanName"];
-                [defaults synchronize];
-                return;
-            }
-        }
-    }
-    
-    // Case 3: We have plan data and hash but the integrity check fails
-    if (planData && planHash) {
-        // Skip integrity check in offline mode if within grace period
-        if (!isOnline && hadActivePlan && lastVerifiedDate) {
-            NSTimeInterval timeElapsed = [[NSDate date] timeIntervalSinceDate:lastVerifiedDate];
-            NSTimeInterval maxOfflineTime = 24 * 60 * 60; // 24 hours in seconds
-            
-            if (timeElapsed <= maxOfflineTime) {
-                NSLog(@"[WeaponX] 📱 Offline but within grace period - not performing integrity check");
-                
-                // Set the re-verification flag for when we're back online
-                [defaults setBool:YES forKey:@"WeaponXNeedsReVerification"];
-                [defaults synchronize];
-                return;
-            }
-        }
-        
-        // Only perform integrity check if we have the right method
-        APIManager *apiManager = [APIManager sharedManager];
-        if ([apiManager respondsToSelector:@selector(verifyPlanDataIntegrity)]) {
-            BOOL isIntegrityValid = [apiManager performSelector:@selector(verifyPlanDataIntegrity)];
-            if (!isIntegrityValid) {
-                NSLog(@"[WeaponX] ⚠️ Inconsistent plan data detected: Integrity check failed");
-                hasInconsistentData = YES;
-            }
-        }
-    }
-    
-    // If inconsistency is found, clear ALL plan-related data for safety
-    if (hasInconsistentData) {
-        // If offline with WeaponXHasActivePlan, we might want to preserve some data
-        if (!isOnline && hadActivePlan && lastVerifiedDate) {
-            NSTimeInterval timeElapsed = [[NSDate date] timeIntervalSinceDate:lastVerifiedDate];
-            NSTimeInterval maxOfflineTime = 24 * 60 * 60; // 24 hours in seconds
-            
-            if (timeElapsed <= maxOfflineTime) {
-                NSLog(@"[WeaponX] 📱 Offline with WeaponXHasActivePlan=YES - preserving partial status");
-                // Just ensure access until we can refresh
-                [defaults setBool:YES forKey:@"WeaponXNeedsReVerification"];
-                [defaults synchronize];
-                return;
-            } else {
-                NSLog(@"[WeaponX] 🚫 Offline grace period expired (%.2f hours elapsed) - clearing inconsistent data", 
-                      timeElapsed / 3600);
-            }
-        } else {
-            NSLog(@"[WeaponX] 🧹 Clearing inconsistent plan data");
-        }
-        
-        // Clear everything plan-related
-        [defaults setObject:@"NO_PLAN" forKey:@"UserPlanName"];
-        [defaults removeObjectForKey:@"UserPlanExpiry"];
-        [defaults removeObjectForKey:@"UserPlanDaysRemaining"];
-        [defaults removeObjectForKey:@"WeaponXUserPlan"];
-        [defaults removeObjectForKey:@"WeaponXUserPlanHash"];
-        [defaults removeObjectForKey:@"WeaponXUserPlanTimestamp"];
-        [defaults removeObjectForKey:@"PlanExpiryDate"];
-        [defaults removeObjectForKey:@"PlanDaysRemaining"];
-        
-        // Flag that access should be restricted until a fresh check is done
-        [defaults setBool:YES forKey:@"WeaponXRestrictedAccess"];
-        [defaults synchronize];
-        
-        // Force a refresh of plan data if we have an auth token and we're online
-        NSString *authToken = [defaults objectForKey:@"WeaponXAuthToken"];
-        if (authToken && isOnline) {
-            APIManager *apiManager = [APIManager sharedManager];
-            if ([apiManager respondsToSelector:@selector(fetchUserPlanWithToken:completion:)]) {
-                NSLog(@"[WeaponX] 🔄 Forcing refresh of plan data from server");
-                [apiManager performSelector:@selector(fetchUserPlanWithToken:completion:) 
-                                withObject:authToken 
-                                withObject:^(NSDictionary *planData, NSError *error) {
-                    if (error) {
-                        NSLog(@"[WeaponX] ❌ Failed to refresh plan data: %@", error);
-                    } else {
-                        NSLog(@"[WeaponX] ✅ Successfully refreshed plan data from server");
-                        
-                        // After successful refresh, remove access restrictions if user has a plan
-                        BOOL serverIndicatesActivePlan = NO;
-                        
-                        if (planData[@"has_plan"] != nil) {
-                            serverIndicatesActivePlan = [planData[@"has_plan"] boolValue];
-                        } else if (planData[@"plan"] && [planData[@"plan"] isKindOfClass:[NSDictionary class]]) {
-                            NSDictionary *plan = planData[@"plan"];
-                            if (plan[@"name"] && ![plan[@"name"] isEqual:@"No Plan"]) {
-                                serverIndicatesActivePlan = YES;
-                            }
-                        }
-                        
-                        // Update restriction flag based on server response
-                        if (serverIndicatesActivePlan) {
-                            NSLog(@"[WeaponX] 🔓 Removing access restrictions based on fresh server data");
-                            [defaults setBool:NO forKey:@"WeaponXRestrictedAccess"];
-                            [defaults synchronize];
-                        }
-                    }
-                }];
-            }
-        }
-    } else {
-        NSLog(@"[WeaponX] ✅ No plan data inconsistencies detected");
-    }
-}
 
 // Basic jailbreak detection method
 - (BOOL)isDeviceJailbroken {
@@ -622,22 +347,6 @@ extern void StartWeaponXGuardian(void);
     return NO;
 }
 
-- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-    // Convert token to string
-    NSString *token = [self stringFromDeviceToken:deviceToken];
-    NSLog(@"[WeaponX] Device Token: %@", token);
-    
-    // Save token to defaults
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults setObject:token forKey:@"WeaponXPushToken"];
-    [defaults synchronize];
-    
-    // Send token to server if user is logged in
-    NSString *authToken = [defaults objectForKey:@"WeaponXAuthToken"];
-    if (authToken) {
-        [self registerPushTokenWithServer:token];
-    }
-}
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     NSLog(@"[WeaponX] Push notification received in background: %@", userInfo);
@@ -677,57 +386,8 @@ extern void StartWeaponXGuardian(void);
     completionHandler(UIBackgroundFetchResultNewData);
 }
 
-- (void)handleBroadcastNotification:(NSNumber *)broadcastId {
-    if (!broadcastId) {
-        return;
-    }
-    
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Update notification badge on Support tab
-        [self updateSupportTabBadge];
-        
-        // If app is active, show the broadcast alert
-        if ([UIApplication sharedApplication].applicationState == UIApplicationStateActive) {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"New Announcement"
-                                                                          message:@"A new announcement has been posted. Would you like to view it now?"
-                                                                   preferredStyle:UIAlertControllerStyleAlert];
-            
-            [alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
-            [alert addAction:[UIAlertAction actionWithTitle:@"View" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                // Open the broadcast detail view
-                [self openBroadcastDetail:broadcastId];
-            }]];
-            
-            [self.window.rootViewController presentViewController:alert animated:YES completion:nil];
-        }
-    });
-}
 
-- (void)handleTicketReplyNotification:(NSNumber *)ticketId {
-    if (!ticketId) {
-        return;
-    }
-    
-    dispatch_async(dispatch_get_main_queue(), ^{
-        // Update notification badge on Support tab
-        [self updateSupportTabBadge];
-        
-        // If app is active, show the ticket reply alert
-        if ([UIApplication sharedApplication].applicationState == UIApplicationStateActive) {
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Support Ticket Update"
-                                                                          message:@"There's a new reply to your support ticket. Would you like to view it now?"
-                                                                   preferredStyle:UIAlertControllerStyleAlert];
-            
-            [alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
-            [alert addAction:[UIAlertAction actionWithTitle:@"View" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                // Open the ticket detail view
-                [self openTicketDetail:ticketId];
-            }]];
-            
-            [self.window.rootViewController presentViewController:alert animated:YES completion:nil];
-        }
-    });
-}
+
 
 - (void)updateSupportTabBadge {
     TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
@@ -736,47 +396,9 @@ extern void StartWeaponXGuardian(void);
     }
 }
 
-- (void)openBroadcastDetail:(NSNumber *)broadcastId {
-    // Find the TabBarController
-    TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-    if (![tabBarController isKindOfClass:[TabBarController class]]) {
-        return;
-    }
-    
-    // Support tab should be accessible by all users
-    // Switch to the Support tab (index 3)
-    [tabBarController setSelectedIndex:3];
-    
-    // Navigate to broadcast detail
-    UINavigationController *supportNav = tabBarController.viewControllers[3];
-    if ([supportNav isKindOfClass:[UINavigationController class]]) {
-        SupportViewController *supportVC = supportNav.viewControllers.firstObject;
-        if ([supportVC isKindOfClass:[SupportViewController class]]) {
-            [supportVC openBroadcastDetail:broadcastId];
-        }
-    }
-}
 
-- (void)openTicketDetail:(NSNumber *)ticketId {
-    // Find the TabBarController
-    TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-    if (![tabBarController isKindOfClass:[TabBarController class]]) {
-        return;
-    }
-    
-    // Support tab should be accessible by all users
-    // Switch to the Support tab (index 3)
-    [tabBarController setSelectedIndex:3];
-    
-    // Navigate to ticket detail
-    UINavigationController *supportNav = tabBarController.viewControllers[3];
-    if ([supportNav isKindOfClass:[UINavigationController class]]) {
-        SupportViewController *supportVC = supportNav.viewControllers.firstObject;
-        if ([supportVC isKindOfClass:[SupportViewController class]]) {
-            [supportVC openTicketDetail:ticketId];
-        }
-    }
-}
+
+
 
 - (NSString *)stringFromDeviceToken:(NSData *)deviceToken {
     NSUInteger length = deviceToken.length;
@@ -794,19 +416,7 @@ extern void StartWeaponXGuardian(void);
     return [hexString copy];
 }
 
-- (void)registerPushTokenWithServer:(NSString *)token {
-    if (!token || token.length == 0) {
-        return;
-    }
-    
-    [[APIManager sharedManager] registerDeviceToken:token deviceType:@"ios" completion:^(BOOL success, NSError *error) {
-        if (error) {
-            NSLog(@"[WeaponX] Error registering push token: %@", error);
-        } else {
-            NSLog(@"[WeaponX] Push token registered successfully");
-        }
-    }];
-}
+
 
 #pragma mark - UNUserNotificationCenterDelegate Methods
 
@@ -823,49 +433,7 @@ extern void StartWeaponXGuardian(void);
     
     // Update badge count for the support tab
     [self updateSupportTabBadge];
-    
-    if ([notificationType isEqualToString:@"broadcast"]) {
-        // For broadcasts, check if we should show an alert or let the system handle it
-        NSNumber *broadcastId = userInfo[@"broadcast_id"];
-        
-        if (broadcastId) {
-            // Show our custom alert for broadcasts
-            [self showBroadcastAlertForBroadcastId:broadcastId];
-            completionHandler(UNNotificationPresentationOptionNone);
-        } else {
-            // If no valid broadcast ID, still show the system notification
-            completionHandler(UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound | 
-                             UNNotificationPresentationOptionList | UNNotificationPresentationOptionBanner);
-        }
-    } else if ([notificationType isEqualToString:@"admin_reply"] || [notificationType isEqualToString:@"ticket_reply"]) {
-        // For ticket replies, show an alert even when in foreground
-        NSNumber *ticketId = userInfo[@"ticket_id"];
-        if (ticketId) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Support Ticket Update"
-                                                                              message:@"There's a new reply to your support ticket. Would you like to view it now?"
-                                                                       preferredStyle:UIAlertControllerStyleAlert];
-                
-                [alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
-                [alert addAction:[UIAlertAction actionWithTitle:@"View" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-                    // Open the ticket detail view
-                    [self openTicketDetail:ticketId];
-                }]];
-                
-                [self.window.rootViewController presentViewController:alert animated:YES completion:nil];
-            });
-            // Don't show the system notification since we're showing our own alert
-            completionHandler(UNNotificationPresentationOptionNone);
-        } else {
-            // If no valid ticket ID, still show the system notification
-            completionHandler(UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound | 
-                             UNNotificationPresentationOptionList | UNNotificationPresentationOptionBanner);
-        }
-    } else {
-        // For other notification types, show the system notification
-        completionHandler(UNNotificationPresentationOptionBadge | UNNotificationPresentationOptionSound | 
-                         UNNotificationPresentationOptionList | UNNotificationPresentationOptionBanner);
-    }
+
 }
 
 // Called to let your app know which action was selected by the user
@@ -879,22 +447,7 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
     NSDictionary *userInfo = response.notification.request.content.userInfo;
     NSString *notificationType = userInfo[@"type"];
     
-    // Handle different action types
-    if ([response.actionIdentifier isEqualToString:@"VIEW_BROADCAST"] || 
-        [response.actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
-        
-        if ([notificationType isEqualToString:@"broadcast"]) {
-            NSNumber *broadcastId = userInfo[@"broadcast_id"];
-            if (broadcastId) {
-                [self openBroadcastDetail:broadcastId];
-            }
-        } else if ([notificationType isEqualToString:@"admin_reply"] || [notificationType isEqualToString:@"ticket_reply"]) {
-            NSNumber *ticketId = userInfo[@"ticket_id"];
-            if (ticketId) {
-                [self openTicketDetail:ticketId];
-            }
-        }
-    }
+
     
     // Call the completion handler when done
     completionHandler();
@@ -1007,22 +560,7 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
     [center setNotificationCategories:[NSSet setWithObjects:broadcastCategory, ticketCategory, nil]];
 }
 
-// Helper method to show the broadcast alert to avoid code duplication
-- (void)showBroadcastAlertForBroadcastId:(NSNumber *)broadcastId {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"New Announcement"
-                                                                      message:@"A new announcement has been posted. Would you like to view it now?"
-                                                               preferredStyle:UIAlertControllerStyleAlert];
-        
-        [alert addAction:[UIAlertAction actionWithTitle:@"Later" style:UIAlertActionStyleCancel handler:nil]];
-        [alert addAction:[UIAlertAction actionWithTitle:@"View" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            // Open the broadcast detail view
-            [self openBroadcastDetail:broadcastId];
-        }]];
-        
-        [self.window.rootViewController presentViewController:alert animated:YES completion:nil];
-    });
-}
+
 
 @end
 

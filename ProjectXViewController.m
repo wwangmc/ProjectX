@@ -3,13 +3,10 @@
 #import "UptimeManager.h"
 #import "CopyHelper.h"
 #import "BottomButtons.h"
-#import "AccountViewController.h"
 #import "FreezeManager.h"
 #import "AppDataCleaner.h"
 #import "AppVersionManager.h"
-#import "APIManager.h"
 #import "TokenManager.h"
-#import "APIManagerPlanExtensions.h"
 #import "ProfileButtonsView.h"
 #import "ProfileManagerViewController.h"
 #import "ProfileCreationViewController.h"
@@ -90,11 +87,9 @@
 // Add this new method to directly update identifier values
 - (void)directUpdateIdentifierValue:(NSString *)identifierType withValue:(NSString *)value;
 
-// Trial offer banner methods
-- (void)setupTrialOfferBanner;
+
 - (BOOL)checkTrialOfferEligibility;
 - (void)getTrialButtonTapped;
-- (BOOL)shouldShowTrialOffer;
 - (void)hideTrialOfferBanner;
 
 // Helper methods for finding view controllers
@@ -906,11 +901,6 @@
                                                  name:@"AppFrozenStateChanged"
                                                object:nil];
     
-    // Register for network status changes
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(handleNetworkStatusChanged:)
-                                                 name:@"WeaponXNetworkStatusChanged"
-                                               object:nil];
     
     // Register for profile changes
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -923,10 +913,7 @@
     // Remove duplicate call to setupProfileButtons since it's already called in setupUI
     [self setupProfileManagement];
     
-    // Setup the trial offer banner for new users
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self setupTrialOfferBanner];
-    });
+
 }
 
 - (void)viewDidLayoutSubviews {
@@ -945,31 +932,6 @@
 
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    
-    // Check network status for trial banner display
-    if (![self isNetworkAvailable] && self.trialOfferBannerView) {
-        // Hide the banner when offline
-        [self hideTrialOfferBanner];
-    }
-    
-    // Check user plan status for trial banner display using the tab restriction system flags
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    BOOL hasActivePlan = [defaults boolForKey:@"WeaponXHasActivePlan"];
-    BOOL isRestricted = [defaults boolForKey:@"WeaponXRestrictedAccess"];
-    BOOL hasPlan = hasActivePlan || !isRestricted;
-    
-    if (hasPlan && self.trialOfferBannerView) {
-        // Hide the banner when user has a plan
-        [self hideTrialOfferBanner];
-    }
-    
-    // Make sure we have our main stack view fully loaded before attempting to add the banner
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        if (!self.trialOfferBannerView) {
-            [self setupTrialOfferBanner];
-        }
-    });
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -977,23 +939,6 @@
     // ... existing code ...
     
     // Check if we should refresh the trial offer banner
-    NSDate *lastShownDate = [[NSUserDefaults standardUserDefaults] objectForKey:@"WeaponXTrialOfferShownDate"];
-    BOOL bannerExists = (self.trialOfferBannerView != nil);
-    
-    // If banner doesn't exist and we haven't shown it in the last hour, check eligibility again
-    if (!bannerExists && lastShownDate) {
-        NSTimeInterval timeSinceShown = [[NSDate date] timeIntervalSinceDate:lastShownDate];
-        if (timeSinceShown > 3600) { // 1 hour = 3600 seconds
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self setupTrialOfferBanner];
-            });
-        }
-    } else if (!bannerExists && !lastShownDate) {
-        // Never shown before, initialize it
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self setupTrialOfferBanner];
-        });
-    }
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -2381,11 +2326,7 @@
     UITabBarController *tabBarController = self.tabBarController;
     if ([tabBarController respondsToSelector:@selector(switchToAccountTab)]) {
         [tabBarController performSelector:@selector(switchToAccountTab)];
-    } else {
-        // Fallback to old method if for some reason the tabBarController doesn't have the method
-        AccountViewController *accountVC = [[AccountViewController alloc] init];
-        [self.navigationController pushViewController:accountVC animated:YES];
-    }
+    } 
 }
 
 #pragma mark - Installed Apps Popup
@@ -3304,400 +3245,6 @@
 
 #pragma mark - UIScrollViewDelegate
 
-// Trial offer banner methods
-- (void)setupTrialOfferBanner {
-}
-
-// Method to reset trial offer status for testing
-- (void)resetTrialOfferStatus {
-    [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"WeaponXHasShownTrialOffer"];
-    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"WeaponXTrialOfferShownDate"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    
-    // Force banner to show again
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (self.trialOfferBannerView) {
-            [self hideTrialOfferBanner];
-        }
-        [self setupTrialOfferBanner];
-    });
-}
-
-- (BOOL)shouldShowTrialOffer {
-    // 1. Only show in online mode - use offline banner indicator logic for consistency
-    if (![self isNetworkAvailable]) {
-        return NO;
-    }
-    
-    // 2. Never show for users with active plans - use existing plan flags
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    BOOL hasActivePlan = [defaults boolForKey:@"WeaponXHasActivePlan"];
-    BOOL isRestricted = [defaults boolForKey:@"WeaponXRestrictedAccess"];
-    BOOL hasPlan = hasActivePlan || !isRestricted;
-    
-    if (hasPlan) {
-        return NO;
-    }
-    
-    // Check if banner has been permanently hidden after 12 hours total display
-    BOOL permanentlyHidden = [defaults boolForKey:@"WeaponXTrialOfferPermanentlyHidden"];
-    if (permanentlyHidden) {
-        return NO;
-    }
-    
-    // 3. Check if already shown for 12 hours total using accumulated display time
-    NSNumber *totalDisplayTime = [defaults objectForKey:@"WeaponXTrialTotalDisplayTime"];
-    if (totalDisplayTime && [totalDisplayTime doubleValue] > 43200) { // 12 hours = 43200 seconds
-        // Mark as permanently hidden
-        [defaults setBool:YES forKey:@"WeaponXTrialOfferPermanentlyHidden"];
-        [defaults synchronize];
-        return NO;
-    }
-    
-    // 4. Only show to users registered max 2 days ago
-    NSDate *userRegistrationDate = [[APIManager sharedManager] userRegistrationDate];
-    if (!userRegistrationDate) {
-        // Check if user is new based on plan_id = 0
-        NSDictionary *userData = [defaults dictionaryForKey:@"WeaponXUserData"];
-        if (!(userData && [userData[@"plan_id"] intValue] == 0)) {
-            return NO;
-        }
-    } else {
-        // Get the server time if available, otherwise use device time
-        NSDate *serverTime = [defaults objectForKey:@"WeaponXServerTime"];
-        NSDate *comparisonTime = serverTime ? serverTime : [NSDate date];
-        
-        // Calculate how long the user has been registered (2 days = 172800 seconds)
-        NSTimeInterval timeRegistered = [comparisonTime timeIntervalSinceDate:userRegistrationDate];
-        
-        if (timeRegistered > 172800) { // 2 days
-            return NO;
-        }
-    }
-    
-    // If this is the first time showing the banner, record the timestamp
-    NSDate *firstShownDate = [defaults objectForKey:@"WeaponXTrialOfferFirstShownDate"];
-    if (!firstShownDate) {
-        // Use server time if available for recording first shown time
-        NSDate *serverTime = [defaults objectForKey:@"WeaponXServerTime"];
-        NSDate *currentTime = serverTime ? serverTime : [NSDate date];
-        
-        [defaults setObject:currentTime forKey:@"WeaponXTrialOfferFirstShownDate"];
-        [defaults synchronize];
-    }
-    
-    // Check with server for eligibility
-    [self performServerEligibilityCheck];
-    
-    return YES;
-}
-
-- (BOOL)isNetworkAvailable {
-    // Use the APIManager's network availability check for consistency with offline banner
-    return [[APIManager sharedManager] isNetworkAvailable];
-}
-
-- (BOOL)checkTrialOfferEligibility {
-    // First, check if user has an active plan
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    BOOL hasActivePlan = [defaults boolForKey:@"WeaponXHasActivePlan"];
-    BOOL isRestricted = [defaults boolForKey:@"WeaponXRestrictedAccess"];
-    BOOL hasPlan = hasActivePlan || !isRestricted;
-    
-    if (hasPlan) {
-        return NO;
-    }
-    
-    // Get the user's registration date
-    NSDate *userRegistrationDate = [[APIManager sharedManager] userRegistrationDate];
-    if (!userRegistrationDate) {
-        return NO;
-    }
-    
-    // Calculate how long the user has been registered
-    NSTimeInterval timeRegistered = [[NSDate date] timeIntervalSinceDate:userRegistrationDate];
-    
-    // Only show to users who registered within the last 3 days (259200 seconds)
-    if (timeRegistered > 259200) {
-        return NO;
-    }
-    
-    // Check with server if this user is eligible for a trial
-    [self performServerEligibilityCheck];
-    
-    // For now, assume eligible until server responds
-    return YES;
-}
-
-- (void)performServerEligibilityCheck {
-    // TEMPORARY FIX: For testing, always assume server says user is eligible
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"WeaponXTrialEligible"];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-    });
-    
-    // Original implementation commented out for testing
-    /*
-    // Get user ID and token for authentication
-    NSString *userId = [[TokenManager sharedInstance] getServerUserId];
-    NSString *token = [[TokenManager sharedInstance] token];
-    
-    if (!userId || !token) {
-        // Handle error - hide banner if already showing
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (self.trialOfferBannerView) {
-                [self hideTrialOfferBanner];
-            }
-        });
-        return;
-    }
-    
-    // Create request to check eligibility
-    NSString *url = [NSString stringWithFormat:@"%@/api/trial/eligibility/%@", 
-                    [[APIManager sharedManager] baseURL], userId];
-    
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]];
-    [request setHTTPMethod:@"GET"];
-    [request setValue:[NSString stringWithFormat:@"Bearer %@", token] forHTTPHeaderField:@"Authorization"];
-    
-    // Create a URL session for this request
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration]];
-    
-    NSURLSessionDataTask *task = [session dataTaskWithRequest:request 
-                                 completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (error) {
-            // On network error, if banner is already showing, keep it
-            return;
-        }
-        
-        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-        BOOL isEligible = NO;
-        
-        if (httpResponse.statusCode == 200 && data) {
-            // Parse response
-            NSError *jsonError;
-            NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-            
-            if (!jsonError && responseDict) {
-                // Update UI on main thread based on response
-                isEligible = [responseDict[@"eligible"] boolValue];
-                
-                // Store eligibility result for future reference
-                [[NSUserDefaults standardUserDefaults] setBool:isEligible forKey:@"WeaponXTrialEligible"];
-                [[NSUserDefaults standardUserDefaults] synchronize];
-            } else {
-                // If we can't parse the response but banner is already showing, keep it
-                return;
-            }
-        } else {
-            // If server error but banner is already showing, keep it
-            return;
-        }
-        
-        // Update UI based on eligibility
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (!isEligible && self.trialOfferBannerView) {
-                // User is not eligible, hide the banner
-                [self hideTrialOfferBanner];
-            } else if (isEligible) {
-                // User is eligible, ensure banner is shown
-                if (!self.trialOfferBannerView) {
-                    [self setupTrialOfferBanner];
-                }
-            }
-        });
-    }];
-    
-    [task resume];
-    */
-}
-
-- (void)getTrialButtonTapped {
-    // Show loading state on button
-    [self.getTrialButton setTitle:@"PROCESSING..." forState:UIControlStateNormal];
-    self.getTrialButton.enabled = NO;
-    
-    // Create a simple CSRF token (in a production app, this would be securely obtained from the server)
-    NSString *csrfToken = [NSUUID UUID].UUIDString;
-    
-    // Proceed with purchase using the token
-    [self purchaseTrialPlanWithCSRFToken:csrfToken];
-}
-
-- (void)purchaseTrialPlanWithCSRFToken:(NSString *)csrfToken {
-    // Get user ID and token for authentication
-    // Use TokenManager instead of direct NSUserDefaults access
-    NSString *userId = [[TokenManager sharedInstance] getServerUserId];
-    NSString *token = [[TokenManager sharedInstance] token];
-    
-    if (!userId || !token) {
-        NSLog(@"[WeaponX] Missing userId or token for trial purchase");
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self showPurchaseError:@"Authentication error. Please log in again."];
-            [self.getTrialButton setTitle:@"GET TRIAL" forState:UIControlStateNormal];
-            self.getTrialButton.enabled = YES;
-        });
-        return;
-    }
-    
-    NSLog(@"[WeaponX] Purchasing trial plan for user ID: %@", userId);
-    
-    // Use the APIManager to purchase the plan instead of implementing the logic again
-    [[APIManager sharedManager] purchasePlanWithToken:token planId:@"1" completion:^(BOOL success, NSError *error) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (success) {
-                // Purchase successful, hide banner and show success message
-                [self showPurchaseSuccess:@"Trial plan activated successfully!"];
-                
-                // Save user plan status
-                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"WeaponXUserHasPlan"];
-                [[NSUserDefaults standardUserDefaults] synchronize];
-                
-                // Hide the banner with animation
-                [self hideTrialOfferBanner];
-            } else {
-                // Purchase failed
-                NSString *errorMessage = error ? error.localizedDescription : @"Error processing purchase.";
-                [self showPurchaseError:errorMessage];
-                [self.getTrialButton setTitle:@"GET TRIAL" forState:UIControlStateNormal];
-                self.getTrialButton.enabled = YES;
-            }
-        });
-    }];
-}
-
-- (void)showPurchaseSuccess:(NSString *)message {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Success"
-                                                                   message:message
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-    [alert addAction:okAction];
-    
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
-- (void)showPurchaseError:(NSString *)errorMessage {
-    // Always append contact support for plan purchase failures
-    NSString *fullMessage = [NSString stringWithFormat:@"%@\n\nPlease contact support.", errorMessage];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Purchase Error" 
-                                                                   message:fullMessage
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-    [alert addAction:okAction];
-    
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
-- (void)hideTrialOfferBanner {
-    if (!self.trialOfferBannerView) {
-        return;
-    }
-    
-    // Track when the banner was hidden for accurate 12-hour total display time
-    NSDate *lastShownDate = [[NSUserDefaults standardUserDefaults] objectForKey:@"WeaponXTrialOfferShownDate"];
-    if (lastShownDate) {
-        // Calculate time displayed in this session
-        NSTimeInterval displayTime = [[NSDate date] timeIntervalSinceDate:lastShownDate];
-        
-        // Get existing total display time or initialize to zero
-        NSNumber *totalDisplayTime = [[NSUserDefaults standardUserDefaults] objectForKey:@"WeaponXTrialTotalDisplayTime"];
-        NSTimeInterval newTotalTime = (totalDisplayTime ? [totalDisplayTime doubleValue] : 0) + displayTime;
-        
-        // Store updated total display time
-        [[NSUserDefaults standardUserDefaults] setObject:@(newTotalTime) forKey:@"WeaponXTrialTotalDisplayTime"];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        
-        // If total display time exceeds 12 hours (43200 seconds), never show again
-        if (newTotalTime > 43200) {
-            [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"WeaponXTrialOfferPermanentlyHidden"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-        }
-    }
-    
-    // Animate the banner removal
-    [UIView animateWithDuration:0.3 animations:^{
-        self.trialOfferBannerView.alpha = 0.0;
-        self.trialOfferBannerView.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL finished) {
-        [self.trialOfferBannerView removeFromSuperview];
-        self.trialOfferBannerView = nil;
-        self.getTrialButton = nil;
-    }];
-}
-
-- (void)showTrialBannerDebugInfo:(UILongPressGestureRecognizer *)recognizer {
-    if (recognizer.state == UIGestureRecognizerStateBegan) {
-        NSString *bannerStatus = self.trialOfferBannerView ? @"Banner is SHOWING" : @"Banner is NOT showing";
-        
-        // Get status values
-        BOOL hasShownBefore = [[NSUserDefaults standardUserDefaults] boolForKey:@"WeaponXHasShownTrialOffer"];
-        NSDate *lastShownDate = [[NSUserDefaults standardUserDefaults] objectForKey:@"WeaponXTrialOfferShownDate"];
-        NSString *lastShownStr = lastShownDate ? [lastShownDate description] : @"Never shown";
-        
-        NSDate *userRegistrationDate = [[APIManager sharedManager] userRegistrationDate];
-        NSString *regDateStr = userRegistrationDate ? [userRegistrationDate description] : @"Unknown";
-        
-        BOOL hasActivePlan = [[APIManager sharedManager] userHasPlan];
-        
-        NSString *message = [NSString stringWithFormat:
-                            @"Trial Banner Debug Info:\n"
-                            @"-------------------\n"
-                            @"%@\n"
-                            @"Has shown before: %@\n"
-                            @"Last shown: %@\n"
-                            @"Reg date: %@\n"
-                            @"Has plan: %@\n"
-                            @"-------------------\n"
-                            @"Tap 'Reset' to force banner to show",
-                            bannerStatus,
-                            hasShownBefore ? @"YES" : @"NO",
-                            lastShownStr,
-                            regDateStr,
-                            hasActivePlan ? @"YES" : @"NO"];
-        
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Trial Banner Debug"
-                                                                       message:message
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        
-        UIAlertAction *resetAction = [UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive
-                                                           handler:^(UIAlertAction * _Nonnull action) {
-            [self resetTrialOfferStatus];
-        }];
-        
-        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel
-                                                           handler:nil];
-        
-        [alert addAction:resetAction];
-        [alert addAction:cancelAction];
-        
-        [self presentViewController:alert animated:YES completion:nil];
-    }
-}
-
-- (void)handleNetworkStatusChanged:(NSNotification *)notification {
-    // Extract isOnline status from notification user info
-    NSDictionary *userInfo = notification.userInfo;
-    BOOL isOnline = [[userInfo objectForKey:@"isOnline"] boolValue];
-    
-    // Update the trial banner based on network status
-    if (isOnline) {
-        // Network came back online, check if we should show the banner
-        if (!self.trialOfferBannerView && [self shouldShowTrialOffer]) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self setupTrialOfferBanner];
-            });
-        }
-    } else {
-        // Network went offline, hide the banner if it's showing
-        if (self.trialOfferBannerView) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self hideTrialOfferBanner];
-            });
-        }
-    }
-}
 
 - (void)showProfileCreation {
     // Create alert controller
@@ -4477,14 +4024,7 @@ else if ([identifierType isEqualToString:@"AppContainerUUID"])
 }
 
 - (void)addApplicationWithExtensionsToScope:(NSString *)bundleID {
-    // if (![[APIManager sharedManager] userHasPlan]) {
-    //     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Plan Required"
-    //                                                                    message:@"You need an active plan to add apps with extensions to scope."
-    //                                                             preferredStyle:UIAlertControllerStyleAlert];
-    //     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
-    //     [self presentViewController:alert animated:YES completion:nil];
-    //     return;
-    // }
+
     if (!bundleID) return;
     
     // Get the app proxy
