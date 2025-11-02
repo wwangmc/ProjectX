@@ -2,7 +2,6 @@
 #import "ProjectXViewController.h"
 #import "MapTabViewController.h"
 #import "SecurityTabViewController.h"
-#import "TokenManager.h"
 #import <objc/runtime.h>
 #import <Security/Security.h>
 #import <CommonCrypto/CommonHMAC.h>
@@ -366,126 +365,8 @@
 
 
 
-#pragma mark - Keychain Security Methods
-
-
-
-
-#pragma mark - Diagnostic Methods
-
-// Method to test server communication
-- (void)testServerCommunication {
-    // Get user ID from TokenManager
-    NSString *userId = [self getServerUserId];
-    if (!userId) {
-        NSLog(@"[WeaponX] 🧪 LAYER 2: No user ID available for testing");
-        return;
-    }
-    
-    NSLog(@"[WeaponX] 🧪 LAYER 2: Testing with user ID: %@", userId);
-    NSLog(@"[WeaponX] 🧪 LAYER 2: Testing server communication");
-    
-    // Create a URL with a timestamp to prevent caching
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://hydra.weaponx.us/access-verification.php"]];
-    [request setHTTPMethod:@"POST"];
-    [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-    
-    // Test payload for map tab
-    NSDictionary *payload = @{
-        @"user_id": userId,
-        @"tab_name": @"map_tab",
-        @"verification_type": @"test",
-        @"access_time": [NSString stringWithFormat:@"%f", [[NSDate date] timeIntervalSince1970]]
-    };
-    
-    NSError *error;
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:payload options:0 error:&error];
-    
-    if (!jsonData) {
-        NSLog(@"[WeaponX] 🧪 LAYER 2: JSON serialization error: %@", error.localizedDescription);
-        return;
-    }
-    
-    [request setHTTPBody:jsonData];
-    
-    NSLog(@"[WeaponX] 🧪 LAYER 2: Test payload: %@", payload);
-    NSLog(@"[WeaponX] 🧪 LAYER 2: Test request sent, waiting for response...");
-    
-    [[[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (error) {
-            NSLog(@"[WeaponX] 🧪 LAYER 2: Connection error: %@", error.localizedDescription);
-            return;
-        }
-        
-        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-        NSLog(@"[WeaponX] 🧪 LAYER 2: Server test response status: %ld", (long)httpResponse.statusCode);
-        
-        if (data) {
-            NSError *jsonError;
-            NSDictionary *responseDict = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-            
-            if (responseDict) {
-                NSLog(@"[WeaponX] 🧪 LAYER 2: Test response: %@", responseDict);
-            } else {
-                NSString *responseString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-                NSLog(@"[WeaponX] 🧪 LAYER 2: Server response (not JSON): %@", responseString);
-            }
-        }
-        
-        NSLog(@"[WeaponX] 🧪 LAYER 2: Server communication test completed");
-    }] resume];
-}
-
-// Method to test Keychain functionality
-
 
 #pragma mark - System Methods
-
-
-// Helper method for handling verification failures
-- (void)denyAccessDueToVerificationFailure:(NSString *)tabName withMessage:(NSString *)message {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        NSLog(@"[WeaponX] 🔒 LAYER 2: Denying access to %@ due to verification failure: %@", tabName, message);
-        
-        // Force navigation back to account tab
-        [self switchToAccountTab];
-        
-        // Show verification alert
-        [self showServerVerificationAlertWithMessage:message];
-    });
-}
-
-// Add enhanced alert for server verification with custom message
-- (void)showServerVerificationAlertWithMessage:(NSString *)message {
-    UIAlertController *alert = [UIAlertController 
-                               alertControllerWithTitle:@"Server Verification Failed" 
-                               message:[NSString stringWithFormat:@"%@ Please check your subscription status.", message] 
-                               preferredStyle:UIAlertControllerStyleAlert];
-    
-    [alert addAction:[UIAlertAction actionWithTitle:@"View Plans" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-        [self switchToAccountTab];
-    }]];
-    
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-    
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
-// Keep the original method for backward compatibility
-- (void)showServerVerificationAlert {
-    [self showServerVerificationAlertWithMessage:@"Our server has detected this account doesn't have permission to access this feature."];
-}
-
-
-
-// Helper method to get the user ID
-- (NSString *)getServerUserId {
-    NSString *userId = [[TokenManager sharedInstance] getServerUserId];
-    if (!userId) {
-        userId = [[NSUserDefaults standardUserDefaults] stringForKey:@"WeaponXUserID"];
-    }
-    return userId;
-}
 
 
 

@@ -47,9 +47,6 @@ extern void StartWeaponXGuardian(void);
     
     // Check authentication status when app is about to enter foreground
     TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-    if ([tabBarController respondsToSelector:@selector(checkAuthenticationStatus)]) {
-        [tabBarController checkAuthenticationStatus];
-    }
     
     
     // Reset the resuming flag after a delay to ensure it's used by all components
@@ -61,23 +58,7 @@ extern void StartWeaponXGuardian(void);
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {
     // Use an atomic flag to prevent multiple concurrent auth checks
-    static BOOL isCheckingAuth = NO;
-    if (isCheckingAuth) {
-        return;
-    }
-    
-    isCheckingAuth = YES;
-    
-    // Make sure we're properly authenticated when app becomes active
-    TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-    if ([tabBarController respondsToSelector:@selector(checkAuthenticationStatus)]) {
-        [tabBarController checkAuthenticationStatus];
-    }
-    
-    // Add a delay before resetting the flag to avoid rapid rechecks
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        isCheckingAuth = NO;
-    });
+ 
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {

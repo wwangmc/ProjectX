@@ -6,7 +6,6 @@
 #import "FreezeManager.h"
 #import "AppDataCleaner.h"
 #import "AppVersionManager.h"
-#import "TokenManager.h"
 #import "ProfileButtonsView.h"
 #import "ProfileManagerViewController.h"
 #import "ProfileCreationViewController.h"
@@ -821,7 +820,8 @@
         
 
     }
-            
+        
+    
     // Add Tools button to navigation bar (right side)
     UIButton *toolsButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [toolsButton setTitle:@"Tools" forState:UIControlStateNormal];
@@ -999,13 +999,7 @@
     
     [headerStack addArrangedSubview:identifiersSection];
     
-    // Add Account button
-    UIButton *accountButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [accountButton setImage:[UIImage systemImageNamed:@"person.crop.circle.fill"] forState:UIControlStateNormal];
-    [accountButton addTarget:self action:@selector(accountButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
-    accountButton.tintColor = [UIColor systemBlueColor];
-    [headerStack addArrangedSubview:accountButton];
-    
+
     // Add Generate All button with minimalistic style
     UIButton *generateAllButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIButtonConfiguration *generateAllConfig = [UIButtonConfiguration plainButtonConfiguration];
@@ -2306,15 +2300,7 @@
     }
 }
 
-#pragma mark - Button Actions
 
-- (void)accountButtonTapped:(UIButton *)sender {
-    // Access the tab bar controller and switch to the account tab
-    UITabBarController *tabBarController = self.tabBarController;
-    if ([tabBarController respondsToSelector:@selector(switchToAccountTab)]) {
-        [tabBarController performSelector:@selector(switchToAccountTab)];
-    } 
-}
 
 #pragma mark - Installed Apps Popup
 

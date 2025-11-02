@@ -14,11 +14,7 @@
 // Device type detection - helpful for iPad-specific handling
 @property (nonatomic, assign, readonly) BOOL isDeviceIPad;
 
-// Check if the user is authenticated and show/hide login screen accordingly
-- (void)checkAuthenticationStatus;
 
-// Method to access the account tab when it's not in the tab bar
-- (void)switchToAccountTab;
 
 // Method to update notification badge on the support tab
 - (void)updateNotificationBadge;
@@ -26,10 +22,6 @@
 // Method to restrict access to only the account tab
 - (void)restrictAccessToAccountTabOnly:(BOOL)restricted;
 
-// Network status methods
-- (BOOL)verifyPlanDataIntegrity;
-- (void)refreshUIForNetworkStatus:(BOOL)isOnline;
-- (void)checkAndShowOfflineGraceAlert;
 
 // Toast message methods
 - (void)showToastMessage:(NSString *)message success:(BOOL)success;
