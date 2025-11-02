@@ -88,33 +88,6 @@ extern void StartWeaponXGuardian(void);
 
 
 
-// Example of screen tracking functionality
-- (void)setupScreenChangeTracking {
-    // We'll primarily rely on tab bar change notifications instead of view controller notifications
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(tabBarSelectionChanged:)
-                                                 name:@"TabBarSelectionChangedNotification"
-                                               object:nil];
-    
-    // Observe app state changes
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(appDidBecomeActiveNotification:)
-                                                 name:UIApplicationDidBecomeActiveNotification
-                                               object:nil];
-    
-    // Set initial screen tracking with a delay to ensure UI is initialized
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self detectAndUpdateCurrentScreen];
-        
-        // Set up a periodic check to ensure screen tracking stays accurate
-        NSTimer *screenCheckTimer = [NSTimer scheduledTimerWithTimeInterval:5.0 
-                                                                     target:self
-                                                                   selector:@selector(detectAndUpdateCurrentScreen) 
-                                                                   userInfo:nil 
-                                                                    repeats:YES];
-        [[NSRunLoop mainRunLoop] addTimer:screenCheckTimer forMode:NSRunLoopCommonModes];
-    });
-}
 
 // New method to directly detect the current screen/tab
 - (void)detectAndUpdateCurrentScreen {

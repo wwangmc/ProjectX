@@ -15,7 +15,6 @@
 #import "BatteryManager.h"
 #import "AppDataBackupRestoreViewController.h"
 #import "ToolViewController.h"
-#import "FilesViewController.h"
 #import <UIKit/UIKit.h>
 #import "ProgressHUDView.h"
 #import <spawn.h>
@@ -778,8 +777,6 @@
     self.title = @"Project X";
     self.view.backgroundColor = [UIColor systemBackgroundColor];
     
-    // Add Files button to left side of navigation bar
-    UIButton *filesButton = [UIButton buttonWithType:UIButtonTypeSystem];
     
     if (@available(iOS 15.0, *)) {
         // Modern button style for iOS 15+
@@ -790,7 +787,6 @@
         filesConfig.imagePadding = 4;
         filesConfig.cornerStyle = UIButtonConfigurationCornerStyleMedium;
         filesConfig.baseForegroundColor = [UIColor systemBlueColor];
-        filesButton.configuration = filesConfig;
     } else {
         // Fallback for iOS 14 and below without using deprecated properties
         // Create a container view to hold the image and text
@@ -823,18 +819,9 @@
             [textLabel.centerYAnchor constraintEqualToAnchor:buttonContentView.centerYAnchor]
         ]];
         
-        // Create button with the custom content view
-        filesButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        [filesButton addTarget:self action:@selector(filesButtonTapped) forControlEvents:UIControlEventTouchUpInside];
-        filesButton.frame = buttonContentView.bounds;
-        [filesButton addSubview:buttonContentView];
+
     }
-    
-    [filesButton addTarget:self action:@selector(filesButtonTapped) forControlEvents:UIControlEventTouchUpInside];
-    
-    UIBarButtonItem *filesBarButton = [[UIBarButtonItem alloc] initWithCustomView:filesButton];
-    self.navigationItem.leftBarButtonItem = filesBarButton;
-    
+            
     // Add Tools button to navigation bar (right side)
     UIButton *toolsButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [toolsButton setTitle:@"Tools" forState:UIControlStateNormal];
@@ -4978,18 +4965,7 @@ else if ([identifierType isEqualToString:@"AppContainerUUID"])
     [self presentViewController:navController animated:YES completion:nil];
 }
 
-- (void)filesButtonTapped {
-    FilesViewController *filesVC = [[FilesViewController alloc] init];
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:filesVC];
-    if (@available(iOS 15.0, *)) {
-        // Modern styling for iOS 15+
-        UINavigationBarAppearance *appearance = [[UINavigationBarAppearance alloc] init];
-        [appearance configureWithDefaultBackground];
-        navController.navigationBar.standardAppearance = appearance;
-        navController.navigationBar.scrollEdgeAppearance = appearance;
-    }
-    [self presentViewController:navController animated:YES completion:nil];
-}
+
 
 - (void)handleProfileChanged:(NSNotification *)notification {
     // This method is called when the profile changes
