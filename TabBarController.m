@@ -174,7 +174,7 @@
     [self startNotificationUpdateTimer];
     
     // Check if user is logged in
-    [self checkAuthenticationStatus];
+    // [self checkAuthenticationStatus];
     
     // Check network status on initial load
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -235,10 +235,10 @@
     
     // Only run this check once during the app launch sequence to avoid 
     // duplicate login screen presentations
-    if (!firstAppearance) {
-        NSLog(@"[WeaponX] Re-checking authentication status on viewDidAppear");
-        [self checkAuthenticationStatus];
-    }
+    // if (!firstAppearance) {
+    //     NSLog(@"[WeaponX] Re-checking authentication status on viewDidAppear");
+    //     [self checkAuthenticationStatus];
+    // }
     
     firstAppearance = NO;
 }
@@ -613,22 +613,23 @@
             [self.tabVerificationStatus setObject:@YES forKey:tabName];
             
             // Check network connectivity
-            BOOL isNetworkAvailable = [[APIManager sharedManager] isNetworkAvailable];
-            
-            if (isNetworkAvailable) {
-                // Online: Force immediate server verification for Layer 2
-                [self sendImmediateVerificationAndBlockUntilComplete:tabName forIndex:selectedIndex];
-            } else {
-                // Offline: Use stored verification data with grace period
-                NSLog(@"[WeaponX] ⚠️ Offline mode detected, using Layer 2 Keychain verification");
+            // BOOL isNetworkAvailable = [[APIManager sharedManager] isNetworkAvailable];
+            [self sendImmediateVerificationAndBlockUntilComplete:tabName forIndex:selectedIndex];
+
+            // if (isNetworkAvailable) {
+            //     // Online: Force immediate server verification for Layer 2
+            //     [self sendImmediateVerificationAndBlockUntilComplete:tabName forIndex:selectedIndex];
+            // } else {
+            //     // Offline: Use stored verification data with grace period
+            //     NSLog(@"[WeaponX] ⚠️ Offline mode detected, using Layer 2 Keychain verification");
                 
-                BOOL offlineAccessAllowed = [self verifyLayer2OfflineAccess:tabName];
-                if (!offlineAccessAllowed) {
-                    // Show offline access denied alert
-                    [self showOfflineAccessDeniedAlert:tabName];
-                    return NO;
-                }
-            }
+            //     BOOL offlineAccessAllowed = [self verifyLayer2OfflineAccess:tabName];
+            //     if (!offlineAccessAllowed) {
+            //         // Show offline access denied alert
+            //         [self showOfflineAccessDeniedAlert:tabName];
+            //         return NO;
+            //     }
+            // }
         }
         
         // We need to check if Layer 2 security denied access (which stored the result in Keychain)
@@ -1702,28 +1703,28 @@
     }
     
     // Check if we're within grace period
-    BOOL withinGracePeriod = [[APIManager sharedManager] isWithinOfflineGracePeriod];
+    // BOOL withinGracePeriod = [[APIManager sharedManager] isWithinOfflineGracePeriod];
     
-    if (!withinGracePeriod) {
-        // Only show if not within grace period
-        dispatch_async(dispatch_get_main_queue(), ^{
-            UIAlertController *alert = [UIAlertController 
-                alertControllerWithTitle:@"Offline Grace Period Expired" 
-                message:@"Your offline access period has expired. Please connect to the internet to continue using all features." 
-                preferredStyle:UIAlertControllerStyleAlert];
+    // if (!withinGracePeriod) {
+    //     // Only show if not within grace period
+    //     dispatch_async(dispatch_get_main_queue(), ^{
+    //         UIAlertController *alert = [UIAlertController 
+    //             alertControllerWithTitle:@"Offline Grace Period Expired" 
+    //             message:@"Your offline access period has expired. Please connect to the internet to continue using all features." 
+    //             preferredStyle:UIAlertControllerStyleAlert];
             
-            [alert addAction:[UIAlertAction 
-                actionWithTitle:@"OK" 
-                style:UIAlertActionStyleDefault 
-                handler:nil]];
+    //         [alert addAction:[UIAlertAction 
+    //             actionWithTitle:@"OK" 
+    //             style:UIAlertActionStyleDefault 
+    //             handler:nil]];
             
-            [self presentViewController:alert animated:YES completion:nil];
+    //         [self presentViewController:alert animated:YES completion:nil];
             
-            // Mark alert as shown
-            [defaults setBool:YES forKey:@"WeaponXOfflineGraceAlertShown"];
-            [defaults synchronize];
-        });
-    }
+    //         // Mark alert as shown
+    //         [defaults setBool:YES forKey:@"WeaponXOfflineGraceAlertShown"];
+    //         [defaults synchronize];
+    //     });
+    // }
 }
 
 #pragma mark - Keychain Security Methods
@@ -2324,26 +2325,7 @@
 }
 
 - (void)showOfflineAccessDeniedAlert:(NSString *)tabName {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        UIAlertController *alert = [UIAlertController 
-            alertControllerWithTitle:@"Offline Access Expired" 
-            message:@"Your offline access period has expired. Please connect to the internet to verify your subscription."
-            preferredStyle:UIAlertControllerStyleAlert];
-        
-        [alert addAction:[UIAlertAction 
-            actionWithTitle:@"View Account" 
-            style:UIAlertActionStyleDefault 
-            handler:^(UIAlertAction * _Nonnull action) {
-                [self switchToAccountTab];
-            }]];
-        
-        [alert addAction:[UIAlertAction 
-            actionWithTitle:@"Cancel" 
-            style:UIAlertActionStyleCancel 
-            handler:nil]];
-        
-        [self presentViewController:alert animated:YES completion:nil];
-    });
+
 }
 
 - (void)networkStatusDidChange:(NSNotification *)notification {

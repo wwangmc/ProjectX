@@ -19,7 +19,7 @@ APPLICATION_NAME = ProjectX
 TOOL_NAME = WeaponXDaemon
 
 # Tweak files
-ProjectXTweak_FILES = Tweak.x WiFiHook.x StorageHooks.x UUIDHooks.x PasteboardHooks.x DeviceModelHooks.x SpringBoardLaunchHook.x UberURLHooks.x IOSVersionHooks.x ThemeHooks.x DeviceSpecHooks.x NetworkConnectionTypeHooks.x CanvasFingerprintHooks.x BootTimeHooks.x DomainBlockingHooks.x IdentifierManager.m IDFAManager.m IDFVManager.m DeviceNameManager.m DeviceModelManager.m WiFiManager.m ProjectXLogging.m WeaponXGuardian.m SerialNumberManager.m ProfileIndicatorView.m IPStatusViewController.m IPStatusCacheManager.m ScoreMeterView.m PassThroughWindow.m ProfileManager.m InlineHook.m fishhook.c LocationSpoofingManager.m JailbreakDetectionBypass.m IOSVersionInfo.m MethodSwizzler.m StorageManager.m BatteryManager.m SystemUUIDManager.m DyldCacheUUIDManager.m PasteboardUUIDManager.m KeychainUUIDManager.m UserDefaultsUUIDManager.m AppGroupUUIDManager.m UptimeManager.m CoreDataUUIDManager.m AppInstallUUIDManager.m AppContainerUUIDManager.m IPMonitorService.m MapTabViewController.m PickupDropManager.m MapTabViewController+PickupDrop.m UberFareCalculator.m LocationHeaderView.m MapTabViewControllerExtension.m DomainBlockingSettings.m BatteryHooks.x NetworkManager.m VPNDetectionBypass.x AppVersionHooks.x
+ProjectXTweak_FILES = Tweak.x WiFiHook.x StorageHooks.x UUIDHooks.x PasteboardHooks.x DeviceModelHooks.x SpringBoardLaunchHook.x UberURLHooks.x IOSVersionHooks.x ThemeHooks.x DeviceSpecHooks.x NetworkConnectionTypeHooks.x CanvasFingerprintHooks.x BootTimeHooks.x DomainBlockingHooks.x IdentifierManager.m IDFAManager.m IDFVManager.m DeviceNameManager.m DeviceModelManager.m WiFiManager.m ProjectXLogging.m WeaponXGuardian.m SerialNumberManager.m ProfileIndicatorView.m IPStatusViewController.m IPStatusCacheManager.m ScoreMeterView.m PassThroughWindow.m ProfileManager.m LocationSpoofingManager.m JailbreakDetectionBypass.m IOSVersionInfo.m MethodSwizzler.m StorageManager.m BatteryManager.m SystemUUIDManager.m DyldCacheUUIDManager.m PasteboardUUIDManager.m KeychainUUIDManager.m UserDefaultsUUIDManager.m AppGroupUUIDManager.m UptimeManager.m CoreDataUUIDManager.m AppInstallUUIDManager.m AppContainerUUIDManager.m IPMonitorService.m MapTabViewController.m PickupDropManager.m MapTabViewController+PickupDrop.m UberFareCalculator.m LocationHeaderView.m MapTabViewControllerExtension.m DomainBlockingSettings.m BatteryHooks.x NetworkManager.m VPNDetectionBypass.x AppVersionHooks.x
 ProjectXTweak_CFLAGS = -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -I$(THEOS_VENDOR_INCLUDE_PATH) -I./include -D USES_LIBUNDIRECT=1 -D SUPPORT_IPAD=1 -D ENABLE_STATE_RESTORATION=1
 ProjectXTweak_FRAMEWORKS = UIKit Foundation AdSupport UserNotifications IOKit Security CoreLocation CoreFoundation Network CoreTelephony SystemConfiguration WebKit SafariServices
 ProjectXTweak_PRIVATE_FRAMEWORKS = MobileCoreServices AppSupport SpringBoardServices
@@ -27,7 +27,7 @@ ProjectXTweak_INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries
 ProjectXTweak_LDFLAGS = -F$(THEOS)/vendor/lib -framework CydiaSubstrate
 
 # App files
-ProjectX_FILES = $(filter-out Tweak.x WiFiHook.x StorageHooks.x UUIDHooks.x PasteboardHooks.x WeaponXDaemon.m JailbreakDetectionBypass.m, $(wildcard *.m)) JailbreakDetectionBypass_App.m fishhook.c IOSVersionInfo.m UptimeManager.m AppInstallUUIDManager.m AppContainerUUIDManager.m AppVersionSpoofingViewController.m IPStatusViewController.m IPStatusCacheManager.m IPMonitorService.m ProjectXSceneDelegate.m ProgressHUDView.m PickupDropManager.m MapTabViewController+PickupDrop.m UberFareCalculator.m LocationHeaderView.m MapTabViewControllerExtension.m DomainBlockingSettings.m DomainManagementViewController.m
+ProjectX_FILES = $(filter-out Tweak.x WiFiHook.x StorageHooks.x UUIDHooks.x PasteboardHooks.x WeaponXDaemon.m JailbreakDetectionBypass.m, $(wildcard *.m)) JailbreakDetectionBypass_App.m IOSVersionInfo.m UptimeManager.m AppInstallUUIDManager.m AppContainerUUIDManager.m AppVersionSpoofingViewController.m IPStatusViewController.m IPStatusCacheManager.m IPMonitorService.m ProjectXSceneDelegate.m ProgressHUDView.m PickupDropManager.m MapTabViewController+PickupDrop.m UberFareCalculator.m LocationHeaderView.m MapTabViewControllerExtension.m DomainBlockingSettings.m DomainManagementViewController.m
 ProjectX_RESOURCE_DIRS = Assets.xcassets
 ProjectX_RESOURCE_FILES = Info.plist Icon.png LaunchScreen.storyboard
 ProjectX_PRIVATE_FRAMEWORKS = FrontBoardServices SpringBoardServices BackBoardServices StoreKitUI MobileCoreServices
@@ -101,7 +101,7 @@ internal-stage::
 
 export CFLAGS = -fobjc-arc -Wno-error
 
-ProjectXCLI_FILES = ProjectXCLIbinary.m DeviceNameManager.m InlineHook.m IdentifierManager.m IDFAManager.m IDFVManager.m WiFiManager.m SerialNumberManager.m ProjectXLogging.m fishhook.c ProfileManager.m IOSVersionInfo.m
+ProjectXCLI_FILES = ProjectXCLIbinary.m DeviceNameManager.m IdentifierManager.m IDFAManager.m IDFVManager.m WiFiManager.m SerialNumberManager.m ProjectXLogging.m ProfileManager.m IOSVersionInfo.m
 ProjectXCLI_CFLAGS = -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -I$(THEOS_VENDOR_INCLUDE_PATH)
 ProjectXCLI_FRAMEWORKS = UIKit Foundation AdSupport UserNotifications IOKit Security
 ProjectXCLI_PRIVATE_FRAMEWORKS = MobileCoreServices AppSupport
