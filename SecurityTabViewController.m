@@ -1246,8 +1246,6 @@
     [self setupIPMonitorControl:contentView];
     // Add VPN Detection Bypass control
     [self setupVPNDetectionBypassControl:contentView];
-    // Add Setup Alert Check control
-    [self setupAlertChecksSection:contentView];
     // Add Time Spoofing control
     [self setupTimeSpoofingControl:contentView];
     // Add Canvas Fingerprinting control
@@ -2646,120 +2644,6 @@
 
         [self.vpnDetectionToggleSwitch.trailingAnchor constraintEqualToAnchor:controlView.contentView.trailingAnchor constant:-20],
         [self.vpnDetectionToggleSwitch.centerYAnchor constraintEqualToAnchor:controlView.contentView.centerYAnchor]
-    ]];
-}
-
-- (void)setupAlertChecksSection:(UIView *)contentView {
-    // Create a glassmorphic container for alert checks
-    UIVisualEffectView *controlView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialLight]];
-    controlView.layer.cornerRadius = 20;
-    controlView.clipsToBounds = YES;
-    controlView.alpha = 0.8;
-    controlView.translatesAutoresizingMaskIntoConstraints = NO;
-    [contentView addSubview:controlView];
-    
-    // Section title label
-    UILabel *titleLabel = [[UILabel alloc] init];
-    titleLabel.text = @"! SETUP ALERT CHECKS";
-    titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightBold];
-    titleLabel.textColor = [UIColor systemRedColor];
-    titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:titleLabel];
-    
-    // Add "Recommended" label
-    UILabel *recommendedLabel = [[UILabel alloc] init];
-    recommendedLabel.text = @"(Recommended)";
-    recommendedLabel.font = [UIFont systemFontOfSize:11 weight:UIFontWeightRegular];
-    recommendedLabel.textColor = [UIColor systemGrayColor];
-    recommendedLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:recommendedLabel];
-    
-    // Bluetooth alert item with checkmark
-    UILabel *bluetoothLabel = [[UILabel alloc] init];
-    bluetoothLabel.text = @"✓ 1 TURN OFF BLUETOOTH";
-    bluetoothLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    bluetoothLabel.textColor = [UIColor labelColor];
-    bluetoothLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:bluetoothLabel];
-    
-    // Apple ID logout item with checkmark
-    UILabel *appleIDLabel = [[UILabel alloc] init];
-    appleIDLabel.text = @"✓ 2 LOGOUT APPLE ID";
-    appleIDLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    appleIDLabel.textColor = [UIColor labelColor];
-    appleIDLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:appleIDLabel];
-    
-    // Notification item with checkmark
-    UILabel *notificationLabel = [[UILabel alloc] init];
-    notificationLabel.text = @"✓ 3 DONT ALLOW NOTIFICATION/TRACKING";
-    notificationLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    notificationLabel.textColor = [UIColor labelColor];
-    notificationLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:notificationLabel];
-
-    // Brightness auto item with checkmark
-    UILabel *brightnessLabel = [[UILabel alloc] init];
-    brightnessLabel.text = @"✓ 4 SET BRIGHTNESS TO AUTO";
-    brightnessLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    brightnessLabel.textColor = [UIColor labelColor];
-    brightnessLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:brightnessLabel];
-    
-    // Touch ID & Passcode item with checkmark
-    UILabel *touchIDLabel = [[UILabel alloc] init];
-    touchIDLabel.text = @"✓ 5 REMOVE TOUCH ID & PASSCODE";
-    touchIDLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    touchIDLabel.textColor = [UIColor labelColor];
-    touchIDLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:touchIDLabel];
-    
-    // Clean var from RootHide app item with checkmark
-    UILabel *cleanVarLabel = [[UILabel alloc] init];
-    cleanVarLabel.text = @"✓ 6 CLEAN VAR FROM ROOTHIDE APP";
-    cleanVarLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightMedium];
-    cleanVarLabel.textColor = [UIColor labelColor];
-    cleanVarLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:cleanVarLabel];
-    
-    // Position control between app version spoofing and copyright
-    [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:self.vpnDetectionLabel.superview.bottomAnchor constant:15], // Directly below VPN/PROXY Detection Bypass card
-        [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
-        [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
-        [controlView.heightAnchor constraintEqualToConstant:215], // Increased height for six items
-        
-        // Position title at the top
-        [titleLabel.topAnchor constraintEqualToAnchor:controlView.contentView.topAnchor constant:15],
-        [titleLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        
-        // Position "Recommended" label to the right of the title
-        [recommendedLabel.leadingAnchor constraintEqualToAnchor:titleLabel.trailingAnchor constant:8],
-        [recommendedLabel.bottomAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:-1],
-        
-        // Position item 1 below the title
-        [bluetoothLabel.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:10],
-        [bluetoothLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        
-        // Position item 2 below item 1
-        [appleIDLabel.topAnchor constraintEqualToAnchor:bluetoothLabel.bottomAnchor constant:5],
-        [appleIDLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        
-        // Position item 3 below item 2
-        [notificationLabel.topAnchor constraintEqualToAnchor:appleIDLabel.bottomAnchor constant:5],
-        [notificationLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        
-        // Position item 4 below item 3
-        [brightnessLabel.topAnchor constraintEqualToAnchor:notificationLabel.bottomAnchor constant:5],
-        [brightnessLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        
-        // Position item 5 below item 4
-        [touchIDLabel.topAnchor constraintEqualToAnchor:brightnessLabel.bottomAnchor constant:5],
-        [touchIDLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        
-        // Position item 6 below item 5
-        [cleanVarLabel.topAnchor constraintEqualToAnchor:touchIDLabel.bottomAnchor constant:5],
-        [cleanVarLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20]
     ]];
 }
 
