@@ -1,9 +1,6 @@
 #import "ProjectXSceneDelegate.h"
 #import "ProjectXViewController.h"
 #import "TabBarController.h"
-#import "UberOrderViewController.h"
-#import "DoorDashOrderViewController.h"
-#import "ToolViewController.h"
 
 @interface ProjectXSceneDelegate ()
 @property (nonatomic, strong) UINavigationController *navigationController;
@@ -60,110 +57,10 @@
         UIOpenURLContext *firstContext = urlContexts.allObjects.firstObject;
         NSURL *url = firstContext.URL;
         
-        if ([url.scheme isEqualToString:@"weaponx"]) {
-            BOOL handled = NO;
-            
-            // Try to handle with UberOrderViewController
-            if ([url.host isEqualToString:@"store-uber-order"]) {
-                handled = [UberOrderViewController handleURLScheme:url];
-                
-                if (handled) {
-                    NSLog(@"[WeaponX] Successfully handled URL scheme for Uber order tracking");
-                    
-                    // Show the Uber order view controller if needed
-                    if ([self.window.rootViewController isKindOfClass:[TabBarController class]]) {
-                        TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-                        
-                        // Navigate to the Home tab (index 1) where ToolViewController is available
-                        [tabBarController setSelectedIndex:1];
-                    }
-                }
-            }
-            // Try to handle with DoorDashOrderViewController
-            else if ([url.host isEqualToString:@"store-doordash-order"]) {
-                handled = [DoorDashOrderViewController handleURLScheme:url];
-                
-                if (handled) {
-                    NSLog(@"[WeaponX] Successfully handled URL scheme for DoorDash order tracking");
-                    
-                    // Show the DoorDash order view controller directly
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        // First navigate to the Home tab which contains the ToolViewController
-                        if ([self.window.rootViewController isKindOfClass:[TabBarController class]]) {
-                            TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-                            [tabBarController setSelectedIndex:1]; // Home tab
-                            
-                            // Then present the DoorDash order view controller modally
-                            DoorDashOrderViewController *doorDashOrdersVC = [DoorDashOrderViewController sharedInstance];
-                            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:doorDashOrdersVC];
-                            navController.modalPresentationStyle = UIModalPresentationFullScreen;
-                            [tabBarController presentViewController:navController animated:YES completion:nil];
-                        }
-                    });
-                }
-            }
-            
-            if (!handled) {
-                NSLog(@"[WeaponX] Failed to handle URL scheme: %@", url);
-            }
-        }
     }
 }
 
-- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
-    UIOpenURLContext *context = [URLContexts anyObject];
-    if (context) {
-        NSURL *url = context.URL;
-        
-        if ([url.scheme isEqualToString:@"weaponx"]) {
-            BOOL handled = NO;
-            
-            // Try to handle with UberOrderViewController
-            if ([url.host isEqualToString:@"store-uber-order"]) {
-                handled = [UberOrderViewController handleURLScheme:url];
-                
-                if (handled) {
-                    NSLog(@"[WeaponX] Successfully handled URL scheme for Uber order tracking");
-                    
-                    // Show the Uber order view controller if needed
-                    if ([self.window.rootViewController isKindOfClass:[TabBarController class]]) {
-                        TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-                        
-                        // Navigate to the Home tab (index 1) which contains the ToolViewController
-                        [tabBarController setSelectedIndex:1];
-                    }
-                }
-            }
-            // Try to handle with DoorDashOrderViewController
-            else if ([url.host isEqualToString:@"store-doordash-order"]) {
-                handled = [DoorDashOrderViewController handleURLScheme:url];
-                
-                if (handled) {
-                    NSLog(@"[WeaponX] Successfully handled URL scheme for DoorDash order tracking");
-                    
-                    // Show the DoorDash order view controller directly
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        // First navigate to the Home tab which contains the ToolViewController
-                        if ([self.window.rootViewController isKindOfClass:[TabBarController class]]) {
-                            TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
-                            [tabBarController setSelectedIndex:1]; // Home tab
-                            
-                            // Then present the DoorDash order view controller modally
-                            DoorDashOrderViewController *doorDashOrdersVC = [DoorDashOrderViewController sharedInstance];
-                            UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:doorDashOrdersVC];
-                            navController.modalPresentationStyle = UIModalPresentationFullScreen;
-                            [tabBarController presentViewController:navController animated:YES completion:nil];
-                        }
-                    });
-                }
-            }
-            
-            if (!handled) {
-                NSLog(@"[WeaponX] Failed to handle URL scheme: %@", url);
-            }
-        }
-    }
-}
+
 
 - (NSUserActivity *)stateRestorationActivityForScene:(UIScene *)scene {
     // Create state restoration activity

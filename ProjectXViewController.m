@@ -13,7 +13,6 @@
 #import "StorageManager.h"
 #import "BatteryManager.h"
 #import "AppDataBackupRestoreViewController.h"
-#import "ToolViewController.h"
 #import <UIKit/UIKit.h>
 #import "ProgressHUDView.h"
 #import <spawn.h>
@@ -821,40 +820,6 @@
 
     }
         
-    
-    // Add Tools button to navigation bar (right side)
-    UIButton *toolsButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [toolsButton setTitle:@"Tools" forState:UIControlStateNormal];
-    toolsButton.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
-    [toolsButton setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
-    
-    if (@available(iOS 15.0, *)) {
-        // Use modern button configuration for iOS 15+
-        UIButtonConfiguration *config = [UIButtonConfiguration plainButtonConfiguration];
-        config.title = @"Tools";
-        config.titleTextAttributesTransformer = ^NSDictionary *(NSDictionary *attributes) {
-            NSMutableDictionary *newAttributes = [attributes mutableCopy];
-            newAttributes[NSFontAttributeName] = [UIFont systemFontOfSize:16 weight:UIFontWeightMedium];
-            newAttributes[NSForegroundColorAttributeName] = [UIColor systemBlueColor];
-            return newAttributes;
-        };
-        config.contentInsets = NSDirectionalEdgeInsetsMake(4, 10, 4, 10);
-        toolsButton.configuration = config;
-    } else {
-        // Fall back to older style for iOS 14 and below
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        toolsButton.contentEdgeInsets = UIEdgeInsetsMake(4, 10, 4, 10);
-        #pragma clang diagnostic pop
-    }
-    
-    toolsButton.layer.cornerRadius = 10;
-    toolsButton.layer.borderWidth = 1;
-    toolsButton.layer.borderColor = [UIColor systemBlueColor].CGColor;
-    [toolsButton addTarget:self action:@selector(toolsButtonTapped) forControlEvents:UIControlEventTouchUpInside];
-    
-    UIBarButtonItem *toolsBarButton = [[UIBarButtonItem alloc] initWithCustomView:toolsButton];
-    self.navigationItem.rightBarButtonItem = toolsBarButton;
     
     // Initialize managers
     self.manager = [IdentifierManager sharedManager];
@@ -3504,33 +3469,11 @@
     NSString *profileName = profileInfo[@"ProfileName"] ?: [NSString stringWithFormat:@"Profile %@", profileId];
     NSString *iconName = profileInfo[@"IconName"] ?: @"default_profile";
     
-    // Update the indicator view
-    [self updateIndicatorWithName:profileName iconName:iconName profileId:profileId];
     
     // Also refresh the identifier values in the UI
     [self refreshIdentifierValuesInUI];
 }
 
-- (void)updateIndicatorWithName:(NSString *)name iconName:(NSString *)iconName profileId:(NSString *)profileId {
-    // Create a single label that combines all elements with the exact format requested
-    UILabel *profileIndicatorLabel = [[UILabel alloc] init];
-    profileIndicatorLabel.text = [NSString stringWithFormat:@"←------------------ Profile Num: %@ -----------------→", profileId];
-    profileIndicatorLabel.textColor = [UIColor systemBlueColor];
-    profileIndicatorLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
-    profileIndicatorLabel.textAlignment = NSTextAlignmentCenter;
-    profileIndicatorLabel.numberOfLines = 0;
-    
-    // Rotate the label to make text vertical, going from bottom to top
-    profileIndicatorLabel.transform = CGAffineTransformMakeRotation(-M_PI_2);
-    profileIndicatorLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.profileIndicatorView addSubview:profileIndicatorLabel];
-    
-    // Center the rotated label in the indicator view
-    [NSLayoutConstraint activateConstraints:@[
-        [profileIndicatorLabel.centerXAnchor constraintEqualToAnchor:self.profileIndicatorView.centerXAnchor],
-        [profileIndicatorLabel.centerYAnchor constraintEqualToAnchor:self.profileIndicatorView.centerYAnchor]
-    ]];
-}
 
 - (void)copyIdentifierValue:(UIButton *)sender {
     // Determine which identifier type this is for
@@ -4936,20 +4879,6 @@ else if ([identifierType isEqualToString:@"AppContainerUUID"])
 
 // Remove the openGeneralSettings method since it's now included in the tryUniversalSettingsMethod
 
-#pragma mark - Tools Button
-
-- (void)toolsButtonTapped {
-    ToolViewController *toolsVC = [[ToolViewController alloc] init];
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:toolsVC];
-    if (@available(iOS 15.0, *)) {
-        // Modern styling for iOS 15+
-        UINavigationBarAppearance *appearance = [[UINavigationBarAppearance alloc] init];
-        [appearance configureWithDefaultBackground];
-        navController.navigationBar.standardAppearance = appearance;
-        navController.navigationBar.scrollEdgeAppearance = appearance;
-    }
-    [self presentViewController:navController animated:YES completion:nil];
-}
 
 
 

@@ -41,7 +41,6 @@
     self.showAdvancedIdentifiers = NO;
 
     // Add vertical profile indicator bar (left side)
-    [self setupProfileIndicator];
     // Profile indicator is now pinned to the left edge, not inside the stack view.
 
     // Add profile buttons view (right side, vertically centered)
@@ -104,7 +103,6 @@
                     }
                 }
                 
-                [weakSelf refreshProfileUI]; // Immediately update UI after new profile and identifier generation
 
             }
         }];
@@ -340,49 +338,6 @@
             }
         }];
     }
-}
-
-- (void)setupProfileIndicator {
-    if (self.profileIndicatorView) {
-        [self.profileIndicatorView removeFromSuperview];
-    }
-    self.profileIndicatorView = [[UIView alloc] init];
-    self.profileIndicatorView.backgroundColor = [UIColor clearColor];
-    self.profileIndicatorView.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:self.profileIndicatorView];
-
-    // Add rotated label for profile number
-    self.profileLabel = [[UILabel alloc] init];
-    self.profileLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.profileLabel.textColor = [UIColor systemBlueColor];
-    self.profileLabel.font = [UIFont systemFontOfSize:12 weight:UIFontWeightBold];
-    self.profileLabel.textAlignment = NSTextAlignmentCenter;
-    self.profileLabel.numberOfLines = 0;
-
-    // Get current profile ID
-    NSString *profileId = @"?";
-    NSDictionary *profileInfo = nil;
-    NSString *centralProfileInfoPath = [[ProfileManager sharedManager] centralProfileInfoPath];
-    if (centralProfileInfoPath) {
-        profileInfo = [NSDictionary dictionaryWithContentsOfFile:centralProfileInfoPath];
-        if (profileInfo && profileInfo[@"ProfileId"]) {
-            profileId = profileInfo[@"ProfileId"];
-        }
-    }
-    self.profileLabel.text = [NSString stringWithFormat:@"\u2190------------------ Profile Num: %@ -----------------\u2192", profileId];
-    self.profileLabel.transform = CGAffineTransformMakeRotation(-M_PI_2);
-    [self.profileIndicatorView addSubview:self.profileLabel];
-
-    // Pin the indicator to the left edge, vertically centered
-    [NSLayoutConstraint activateConstraints:@[
-        [self.profileIndicatorView.leadingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.leadingAnchor constant:-8],
-        [self.profileIndicatorView.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
-        [self.profileIndicatorView.widthAnchor constraintEqualToConstant:30],
-        [self.profileIndicatorView.heightAnchor constraintEqualToConstant:260],
-        [self.profileLabel.centerXAnchor constraintEqualToAnchor:self.profileIndicatorView.centerXAnchor],
-        [self.profileLabel.centerYAnchor constraintEqualToAnchor:self.profileIndicatorView.centerYAnchor],
-        [self.profileLabel.widthAnchor constraintLessThanOrEqualToConstant:UIScreen.mainScreen.bounds.size.height - 48]
-    ]];
 }
 
 
@@ -726,59 +681,7 @@
 }
 
 
-// MARK: - Profile/Identifier UI Refresh
-- (void)refreshProfileUI {
-    // Update profile label
-    NSString *profileId = @"?";
-    NSDictionary *profileInfo = nil;
-    NSString *centralProfileInfoPath = [[ProfileManager sharedManager] centralProfileInfoPath];
-    if (centralProfileInfoPath) {
-        profileInfo = [NSDictionary dictionaryWithContentsOfFile:centralProfileInfoPath];
-        if (profileInfo && profileInfo[@"ProfileId"]) {
-            profileId = profileInfo[@"ProfileId"];
-        }
-    }
-    if (self.profileLabel) {
-        self.profileLabel.text = [NSString stringWithFormat:@"←------------------ Profile Num: %@ -----------------→", profileId];
-    }
-    
-    // Update IMEI/MEID labels
-    for (UIView *card in @[self.imeiCard, self.meidCard]) {
-        UILabel *valueLabel = [card viewWithTag:100];
-        NSString *key = (card.tag == 200) ? @"IMEI" : @"MEID";
-        if (valueLabel && key) {
-            valueLabel.text = [[IdentifierManager sharedManager] currentValueForIdentifier:key] ?: @"Not Set";
-        }
-    }
-    
-    // Update Device Model label and state
-    if (self.deviceModelCard) {
-        UILabel *valueLabel = [self.deviceModelCard viewWithTag:100];
-        if (valueLabel) {
-            NSString *deviceModel = [[IdentifierManager sharedManager] currentValueForIdentifier:@"DeviceModel"];
-            if (deviceModel) {
-                valueLabel.text = deviceModel; // Only show the model string (iPhone15,2)
-            } else {
-                valueLabel.text = @"Not Set";
-        }
-        }
-        
-        // Also update the state label (Enabled/Disabled)
-        [self updateStateForCard:self.deviceModelCard withIdentifierType:@"DeviceModel"];
-    }
-    
-    // Update Device Theme label and state
-    if (self.deviceThemeCard) {
-        UILabel *valueLabel = [self.deviceThemeCard viewWithTag:100];
-        if (valueLabel) {
-            NSString *deviceTheme = [[IdentifierManager sharedManager] currentValueForIdentifier:@"DeviceTheme"];
-            valueLabel.text = deviceTheme ?: @"Not Set";
-        }
-        
-        // Also update the state label (Enabled/Disabled)
-        [self updateStateForCard:self.deviceThemeCard withIdentifierType:@"DeviceTheme"];
-    }
-}
+
 
 // Helper method to update the state label and switch for a card
 - (void)updateStateForCard:(UIView *)card withIdentifierType:(NSString *)identifierType {

@@ -535,65 +535,6 @@ static int sysctlbyname_hook(const char *name, void *oldp, size_t *oldlenp, void
 
 %hook UIImage
 
-// Extension method to add profile indicator
-%new
-- (UIImage *)weaponx_addProfileIndicator {
-    // Get the current profile ID from NSUserDefaults
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.hydra.projectx.shared"];
-    NSString *profileId = [defaults objectForKey:@"CurrentProfileID"];
-    
-    if (!profileId) {
-        profileId = @"1"; // Default to 1 if no profile ID is saved
-    }
-    
-    // Ensure profileId is treated as a string to avoid any numeric conversion issues
-    NSString *displayProfileId = [NSString stringWithFormat:@"%@", profileId];
-    PXLog(@"[WeaponX] Screenshot using profile ID: %@", displayProfileId);
-    
-    // Begin a new graphics context with the image size
-    UIGraphicsBeginImageContextWithOptions(self.size, NO, self.scale);
-    
-    // Draw the original image
-    [self drawAtPoint:CGPointZero];
-    
-    // Create the indicator text
-    NSString *indicatorText = [NSString stringWithFormat:@"←------------------ Profile Num: %@ -----------------→", displayProfileId];
-    
-    // Create the attributes for the text
-    UIFont *font = [UIFont systemFontOfSize:14 weight:UIFontWeightBold];
-    NSDictionary *attributes = @{
-        NSFontAttributeName: font,
-        NSForegroundColorAttributeName: [UIColor systemBlueColor]
-    };
-    
-    // Create the text to be drawn
-    NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:indicatorText attributes:attributes];
-    
-    // Get the size of the text
-    CGSize textSize = [attributedString size];
-    
-    // Save the context state
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSaveGState(context);
-    
-    // Translate and rotate the context to draw vertical text on the left edge
-    CGContextTranslateCTM(context, 20, self.size.height / 2);
-    CGContextRotateCTM(context, -M_PI_2);
-    
-    // Draw the text
-    [attributedString drawAtPoint:CGPointMake(-textSize.width / 2, -textSize.height / 2)];
-    
-    // Restore the context state
-    CGContextRestoreGState(context);
-    
-    // Get the modified image
-    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
-    
-    // End the graphics context
-    UIGraphicsEndImageContext();
-    
-    return newImage ?: self;
-}
 
 // Extension method to remove navigation bar
 %new
