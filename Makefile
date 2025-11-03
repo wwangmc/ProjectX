@@ -15,30 +15,23 @@ THEOS_PACKAGE_INSTALL_PREFIX = /var/jb
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = ProjectXTweak
 APPLICATION_NAME = ProjectX
 TOOL_NAME = WeaponXDaemon
 
-# Tweak files
-ProjectXTweak_FILES = Tweak.x WiFiHook.x StorageHooks.x UUIDHooks.x PasteboardHooks.x DeviceModelHooks.x SpringBoardLaunchHook.x UberURLHooks.x IOSVersionHooks.x ThemeHooks.x DeviceSpecHooks.x NetworkConnectionTypeHooks.x CanvasFingerprintHooks.x BootTimeHooks.x DomainBlockingHooks.x IdentifierManager.m IDFAManager.m IDFVManager.m DeviceNameManager.m DeviceModelManager.m WiFiManager.m ProjectXLogging.m WeaponXGuardian.m SerialNumberManager.m ProfileIndicatorView.m IPStatusViewController.m IPStatusCacheManager.m ScoreMeterView.m PassThroughWindow.m ProfileManager.m LocationSpoofingManager.m JailbreakDetectionBypass.m IOSVersionInfo.m MethodSwizzler.m StorageManager.m BatteryManager.m SystemUUIDManager.m DyldCacheUUIDManager.m PasteboardUUIDManager.m KeychainUUIDManager.m UserDefaultsUUIDManager.m AppGroupUUIDManager.m UptimeManager.m CoreDataUUIDManager.m AppInstallUUIDManager.m AppContainerUUIDManager.m IPMonitorService.m MapTabViewController.m PickupDropManager.m MapTabViewController+PickupDrop.m UberFareCalculator.m LocationHeaderView.m MapTabViewControllerExtension.m DomainBlockingSettings.m BatteryHooks.x NetworkManager.m VPNDetectionBypass.x AppVersionHooks.x
-ProjectXTweak_CFLAGS = -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -I$(THEOS_VENDOR_INCLUDE_PATH) -I./include -D USES_LIBUNDIRECT=1 -D SUPPORT_IPAD=1 -D ENABLE_STATE_RESTORATION=1
-ProjectXTweak_FRAMEWORKS = UIKit Foundation AdSupport UserNotifications IOKit Security CoreLocation CoreFoundation Network CoreTelephony SystemConfiguration WebKit SafariServices
-ProjectXTweak_PRIVATE_FRAMEWORKS = MobileCoreServices AppSupport SpringBoardServices
-ProjectXTweak_INSTALL_PATH = /Library/MobileSubstrate/DynamicLibraries
-ProjectXTweak_LDFLAGS = -F$(THEOS)/vendor/lib -framework CydiaSubstrate
+
 
 # App files
-ProjectX_FILES = $(filter-out Tweak.x WiFiHook.x StorageHooks.x UUIDHooks.x PasteboardHooks.x WeaponXDaemon.m JailbreakDetectionBypass.m, $(wildcard *.m)) JailbreakDetectionBypass_App.m IOSVersionInfo.m UptimeManager.m AppInstallUUIDManager.m AppContainerUUIDManager.m AppVersionSpoofingViewController.m IPStatusViewController.m IPStatusCacheManager.m IPMonitorService.m ProjectXSceneDelegate.m ProgressHUDView.m PickupDropManager.m MapTabViewController+PickupDrop.m UberFareCalculator.m LocationHeaderView.m MapTabViewControllerExtension.m DomainBlockingSettings.m DomainManagementViewController.m
+ProjectX_FILES = $(wildcard *.m) $(wildcard common/*.m)
 ProjectX_RESOURCE_DIRS = Assets.xcassets
 ProjectX_RESOURCE_FILES = Info.plist Icon.png LaunchScreen.storyboard
 ProjectX_PRIVATE_FRAMEWORKS = FrontBoardServices SpringBoardServices BackBoardServices StoreKitUI MobileCoreServices
-ProjectX_LDFLAGS = -framework CoreData -F$(THEOS)/sdks/iPhoneOS16.5.sdk/System/Library/PrivateFrameworks -framework UIKit -framework Foundation -rpath /var/jb/usr/lib
+# ProjectX_LDFLAGS = -I./common
 ProjectX_FRAMEWORKS = UIKit Foundation MobileCoreServices CoreServices StoreKit IOKit Security CoreLocation CoreLocationUI
 ProjectX_CODESIGN_FLAGS = -Sent.plist
-ProjectX_CFLAGS = -fobjc-arc -D SUPPORT_IPAD=1 -D ENABLE_STATE_RESTORATION=1
+ProjectX_CFLAGS = -fobjc-arc -D SUPPORT_IPAD=1 -D ENABLE_STATE_RESTORATION=1 -I./common
 
 # Daemon files
-WeaponXDaemon_FILES = WeaponXDaemon.m
+WeaponXDaemon_FILES = WeaponXMountDaemon/WeaponXDaemon.m
 WeaponXDaemon_CFLAGS = -fobjc-arc
 WeaponXDaemon_FRAMEWORKS = Foundation IOKit
 WeaponXDaemon_INSTALL_PATH = /Library/WeaponX
@@ -126,3 +119,5 @@ after-package::
 	@echo "✅ Checking Guardian directory and log files..."
 	@ls -la $(THEOS_STAGING_DIR)/../debug/var/jb/Library/WeaponX/Guardian/ || echo "❌ Guardian directory not found!"
 	@echo "Package check completed!"
+SUBPROJECTS += ProjectXTweak
+include $(THEOS_MAKE_PATH)/aggregate.mk

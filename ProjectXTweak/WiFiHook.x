@@ -6,12 +6,12 @@
 #import <dlfcn.h>
 #import "ProjectXLogging.h"
 #import "WiFiManager.h"
-#import "MethodSwizzler.h"
 #import <ellekit/ellekit.h>
 #import <Network/Network.h>
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <ifaddrs.h>
 #import <net/if.h>
+#import "MethodSwizzler.h"
 
 // Path to scoped apps plist
 static NSString *const kScopedAppsPath = @"/var/jb/var/mobile/Library/Preferences/com.hydra.projectx.global_scope.plist";

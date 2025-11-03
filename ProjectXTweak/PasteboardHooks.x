@@ -3,7 +3,7 @@
 #import <objc/runtime.h>
 #import "ProjectXLogging.h"
 #import "PasteboardUUIDManager.h"
-#import <ellekit/ellekit.h>
+// #import <ellekit/ellekit.h>
 
 // Path to scoped apps plist
 static NSString *const kScopedAppsPath = @"/var/jb/var/mobile/Library/Preferences/com.hydra.projectx.global_scope.plist";

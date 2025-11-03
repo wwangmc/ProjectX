@@ -12,6 +12,7 @@
 #import <mach-o/dyld.h>
 #import <substrate.h>
 #import <ellekit/ellekit.h>
+#import "MobileGestalt.h"
 
 // Original function pointers
 static int (*orig_uname)(struct utsname *);

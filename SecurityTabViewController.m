@@ -1,7 +1,6 @@
 #import "SecurityTabViewController.h"
 #import "ProjectXLogging.h"
 #import "IdentifierManager.h"
-#import "JailbreakDetectionBypass.h"
 #import "AppVersionSpoofingViewController.h"
 #import "DeviceSpecificSpoofingViewController.h"
 #import "IPStatusViewController.h"
@@ -2087,61 +2086,7 @@
 }
 
 - (void)jailbreakDetectionToggleChanged:(UISwitch *)sender {
-    BOOL enabled = sender.isOn;
-    
-    // Save setting immediately and synchronize
-    [self.securitySettings setBool:enabled forKey:@"jailbreakDetectionEnabled"];
-    [self.securitySettings synchronize];
-    
-    // Update the JailbreakDetectionBypass singleton to match the UI state
-    // This fixes the disconnect between the UI toggle and the bypass class
-    [[JailbreakDetectionBypass sharedInstance] setEnabled:enabled];
-    
-    // Regular in-process notification with all necessary context
-    NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
-    [userInfo setObject:@(enabled) forKey:@"enabled"];
-    [userInfo setObject:@"SecurityTabView" forKey:@"sender"];
-    [userInfo setObject:[NSDate date] forKey:@"timestamp"];
-    [userInfo setObject:@YES forKey:@"forceReload"];  // Add flag to force reload of settings
-    
-    // Post notification immediately on main thread
-    dispatch_async(dispatch_get_main_queue(), ^{
-        PXLog(@"[SecurityTab] 🚨 Broadcasting jailbreak toggle change: %@", enabled ? @"ON" : @"OFF");
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"com.hydra.projectx.toggleJailbreakDetection" 
-                                                            object:nil 
-                                                          userInfo:userInfo];
-    });
-    
-    // Also send Darwin notification to reach SpringBoard and all other processes
-    CFNotificationCenterRef darwinCenter = CFNotificationCenterGetDarwinNotifyCenter();
-    
-    // Enhanced notification system - send specific state notifications to ensure clarity
-    if (enabled) {
-        // Specific ON notification
-        CFNotificationCenterPostNotification(darwinCenter, CFSTR("com.hydra.projectx.enableJailbreakDetection"), NULL, NULL, YES);
-        // Generic change notification
-        CFNotificationCenterPostNotification(darwinCenter, CFSTR("com.hydra.projectx.jailbreakToggleChanged"), NULL, NULL, YES);
-    } else {
-        // Specific OFF notification - most important for fixing crashes
-        CFNotificationCenterPostNotification(darwinCenter, CFSTR("com.hydra.projectx.disableJailbreakDetection"), NULL, NULL, YES);
-        // Generic change notification
-        CFNotificationCenterPostNotification(darwinCenter, CFSTR("com.hydra.projectx.jailbreakToggleChanged"), NULL, NULL, YES);
-        
-        // Special emergency notification - ensure all processes know bypass is disabled
-        CFNotificationCenterPostNotification(darwinCenter, CFSTR("com.hydra.projectx.emergencyDisableJailbreakBypass"), NULL, NULL, YES);
-    }
-    
-    // Reset NSUserDefaults to ensure data is consistent across all processes
-    NSString *resetCmd = enabled ? @"ON" : @"OFF";
-    notify_post([@"com.hydra.projectx.resetJailbreakToggle." stringByAppendingString:resetCmd].UTF8String);
-    
-    PXLog(@"[SecurityTab] 🔴 Jailbreak detection %@: NSUserDefaults updated, JailbreakDetectionBypass updated, Darwin notifications sent", 
-           enabled ? @"ENABLED" : @"DISABLED");
-    
-    // Add haptic feedback
-    UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-    [generator prepare];
-    [generator impactOccurred];
+
 }
 
 - (void)networkDataSpoofToggleChanged:(UISwitch *)sender {

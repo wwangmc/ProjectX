@@ -26,8 +26,7 @@
 #import <ellekit/ellekit.h>
 #import <CoreMotion/CoreMotion.h> // Import CoreMotion framework for sensor spoofing
 #import "LocationSpoofingManager.h" // Import location spoofing manager
-#import "JailbreakDetectionBypass.h" // Import jailbreak detection bypass manager
-
+#import "MobileGestalt.h"
 // Forward declarations for classes we need to hook
 @interface SBScreenshotManager : NSObject
 - (void)saveScreenshotsWithCompletion:(id)completion;
@@ -77,9 +76,8 @@ static int sysctlbyname_hook(const char *name, void *oldp, size_t *oldlenp, void
         
         // Jailbreak detection via sysctlbyname
         if (strcmp(name, "kern.bootargs") == 0) {
-            // Two-stage verification for improved reliability:
             // 1. Check JailbreakDetectionBypass singleton first (most reliable)
-            BOOL jailbreakDetectionEnabled = [[JailbreakDetectionBypass sharedInstance] isEnabledRealtime];
+            BOOL jailbreakDetectionEnabled = true;
             
             // 2. Fallback to NSUserDefaults if singleton doesn't work for some reason
             if (!jailbreakDetectionEnabled) {
@@ -2036,19 +2034,6 @@ static char* hook_GSSystemGetSerialNo(void) {
         PXLog(@"[JailbreakBypass] Not initializing in critical system process: %@", currentProcess);
     } else {
         // For regular apps, initialize normally but with a small delay to avoid boot loops
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            // Check user preference before initializing
-            NSUserDefaults *securitySettings = [[NSUserDefaults alloc] initWithSuiteName:@"com.weaponx.securitySettings"];
-            BOOL jailbreakDetectionEnabled = [securitySettings boolForKey:@"jailbreakDetectionEnabled"];
-            
-            // Set the bypass enabled state based on user preference
-            [[JailbreakDetectionBypass sharedInstance] setEnabled:jailbreakDetectionEnabled];
-            
-            // Then initialize the bypass hooks
-            [[JailbreakDetectionBypass sharedInstance] setupBypass];
-            
-            PXLog(@"[JailbreakBypass] Initialized with state: %@", jailbreakDetectionEnabled ? @"ENABLED" : @"DISABLED");
-        });
     }
     
     // Register early initialization callback for ElleKit

@@ -1,6 +1,5 @@
 #import "TabBarController.h"
 #import "ProjectXViewController.h"
-#import "MapTabViewController.h"
 #import "SecurityTabViewController.h"
 #import <objc/runtime.h>
 #import <Security/Security.h>
@@ -65,13 +64,11 @@
     
     // Create view controllers
     ProjectXViewController *identityVC = [[ProjectXViewController alloc] init];
-    MapTabViewController *mapVC = [[MapTabViewController alloc] init];
     SecurityTabViewController *securityVC = [[SecurityTabViewController alloc] init];
 
     // AccountViewController *accountVC = [[AccountViewController alloc] init];
     
     // Wrap each view controller in a navigation controller
-    UINavigationController *mapNav = [[UINavigationController alloc] initWithRootViewController:mapVC];
     UINavigationController *identityNav = [[UINavigationController alloc] initWithRootViewController:identityVC];
     UINavigationController *securityNav = [[UINavigationController alloc] initWithRootViewController:securityVC];
     
@@ -79,12 +76,11 @@
     // self.accountNavController = [[UINavigationController alloc] initWithRootViewController:accountVC];
     
     // Configure tab bar items (excluding account)
-    mapNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Map" image:[UIImage systemImageNamed:@"map.fill"] tag:0];
     identityNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Home" image:[UIImage systemImageNamed:@"house.fill"] tag:1];
     securityNav.tabBarItem = [[UITabBarItem alloc] initWithTitle:@"Security" image:[UIImage systemImageNamed:@"shield.checkerboard"] tag:2];
     
     // Set view controllers (excluding account)
-    self.viewControllers = @[mapNav, identityNav, securityNav];
+    self.viewControllers = @[identityNav, securityNav];
     
     // Set Home tab as default selected tab
     self.selectedIndex = 1;
