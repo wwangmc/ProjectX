@@ -1,10 +1,5 @@
 #import "UIKit/UIKit.h"
 
-@interface MatrixRainView : UIView
-- (void)startAnimation;
-- (void)stopAnimation;
-- (void)updateWithColor:(UIColor *)color;
-@end
 
 @interface SecurityCardView : UIView
 @property (nonatomic, strong) UILabel *titleLabel;
@@ -24,15 +19,8 @@
 - (void)presentIPStatusPage;
 
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) MatrixRainView *matrixRainView;
 @property (nonatomic, strong) NSMutableArray *securityCards;
 @property (nonatomic, strong) NSUserDefaults *securitySettings;
-@property (nonatomic, assign) BOOL matrixRainEnabled;
-
-// Matrix rain control
-@property (nonatomic, strong) UILabel *matrixLabel;
-@property (nonatomic, strong) UISwitch *matrixToggleSwitch;
-@property (nonatomic, strong) UIButton *matrixInfoButton;
 
 // Profile indicator control
 @property (nonatomic, strong) UILabel *profileIndicatorLabel;
@@ -89,7 +77,6 @@
 @property (nonatomic, strong) UIButton *localIPGenerateButton;
 
 // Private methods
-- (void)setupMatrixControl:(UIView *)contentView;
 - (void)setupProfileIndicatorControl:(UIView *)contentView;
 - (void)setupJailbreakDetectionControl:(UIView *)contentView;
 - (void)setupNetworkDataSpoofControl:(UIView *)contentView;

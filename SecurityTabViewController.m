@@ -17,296 +17,7 @@
 #import <arpa/inet.h>
 #import <MapKit/MapKit.h>
 
-#pragma mark - MatrixRainView Implementation
 
-@interface MatrixRainCharacter : NSObject
-@property (nonatomic, assign) CGPoint position;
-@property (nonatomic, copy) NSString *character;
-@property (nonatomic, strong) UIColor *color;
-@property (nonatomic, assign) CGFloat speed;
-@property (nonatomic, assign) CGFloat opacity;
-
-
-@end
-
-@implementation MatrixRainCharacter
-
-- (instancetype)init {
-    if (self = [super init]) {
-        // Set default properties
-        _character = [self randomCharacter];
-        _speed = (arc4random_uniform(10) + 1) / 10.0; // 0.1 to 1.0
-        _opacity = 1.0;
-    }
-    return self;
-}
-
-- (NSString *)randomCharacter {
-    // Include Japanese katakana, hiragana, and other symbols for more futuristic look
-    NSArray *characterSets = @[
-        @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@&%!?;:=+*-/\\",
-        @"ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ",
-        @"αβγδεζηθικλμνξοπρστυφχψω",
-        @"∂∆∏∑−±∞≠≈∫√∞²³°≤≥→×÷⌂⌐¬"
-    ];
-    
-    // Select a random character set with higher probability for Japanese characters
-    int setIndex = arc4random_uniform(100) < 75 ? arc4random_uniform(3) + 1 : 0;
-    NSString *selectedSet = characterSets[setIndex];
-    
-    int randomIndex = arc4random_uniform((u_int32_t)[selectedSet length]);
-    return [selectedSet substringWithRange:NSMakeRange(randomIndex, 1)];
-}
-
-
-
-@end
-
-@interface MatrixRainView ()
-@property (nonatomic, strong) NSMutableArray *columns;
-@property (nonatomic, strong) CADisplayLink *displayLink;
-@property (nonatomic, strong) UIColor *matrixColor;
-@property (nonatomic, strong) NSArray *depthColors;
-
-
-@end
-
-@implementation MatrixRainView
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    if (self = [super initWithFrame:frame]) {
-        [self setup];
-    }
-    return self;
-}
-
-- (void)setup {
-    self.backgroundColor = [UIColor clearColor];
-    self.matrixColor = [UIColor systemGreenColor];
-    
-    // Define colors for depth effect - only green shades, no white
-    self.depthColors = @[
-        [UIColor colorWithRed:0.1 green:1.0 blue:0.1 alpha:1.0],     // Bright green
-        [UIColor colorWithRed:0.0 green:0.8 blue:0.0 alpha:1.0],     // Medium green
-        [UIColor systemGreenColor],                                   // Standard green
-        [UIColor colorWithRed:0.0 green:0.5 blue:0.0 alpha:1.0]      // Dark green
-    ];
-    
-    self.columns = [NSMutableArray array];
-    
-    // Set up columns of characters - wider columns for less density
-    CGFloat columnWidth = 25.0; // Increased from 15.0 to reduce density
-    NSInteger numColumns = self.bounds.size.width / columnWidth;
-    
-    for (int i = 0; i < numColumns; i++) {
-        // Randomly skip some columns (30% chance)
-        if (arc4random_uniform(100) < 30) {
-            [self.columns addObject:[NSMutableArray array]]; // Empty column
-            continue;
-        }
-        
-        NSMutableArray *column = [NSMutableArray array];
-        
-        // Random starting position with more spacing
-        CGFloat startY = - (CGFloat)(arc4random_uniform(1000));
-        
-        // Fewer characters per column (3-12 instead of 5-20)
-        int numChars = arc4random_uniform(10) + 3;
-        
-        for (int j = 0; j < numChars; j++) {
-            MatrixRainCharacter *character = [[MatrixRainCharacter alloc] init];
-            // More vertical spacing between characters
-            character.position = CGPointMake(i * columnWidth, startY - (j * 25));
-            
-            // Assign depth-based color
-            int depthIndex = arc4random_uniform(4);
-            character.color = self.depthColors[depthIndex];
-            
-            // Vary speed based on depth
-            character.speed = (0.3 + (arc4random_uniform(12) / 10.0)) * (1.0 - (depthIndex * 0.15));
-            
-            [column addObject:character];
-        }
-        
-        [self.columns addObject:column];
-    }
-}
-
-- (void)startAnimation {
-    if (!self.displayLink) {
-        self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(updateMatrix)];
-        // Use an even lower frame rate (20 fps) to reduce CPU usage further
-        self.displayLink.preferredFramesPerSecond = 20;
-        [self.displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
-    }
-}
-
-- (void)stopAnimation {
-    [self.displayLink invalidate];
-    self.displayLink = nil;
-    [self setNeedsDisplay];
-}
-
-- (void)updateWithColor:(UIColor *)color {
-    self.matrixColor = color;
-    for (NSMutableArray *column in self.columns) {
-        for (MatrixRainCharacter *character in column) {
-            character.color = color;
-        }
-    }
-    [self setNeedsDisplay];
-}
-
-- (void)updateMatrix {
-    static int frameCount = 0;
-    frameCount++;
-    
-    for (NSMutableArray *column in self.columns) {
-        // Skip empty columns
-        if (column.count == 0) {
-            continue;
-        }
-        
-        // Track the first visible character to make it brighter
-        MatrixRainCharacter *leadCharacter = nil;
-        CGFloat minY = CGFLOAT_MAX;
-        
-        for (MatrixRainCharacter *character in column) {
-            // Move character down with its own speed
-            CGPoint position = character.position;
-            position.y += character.speed * 6; // Reduced speed multiplier from 8 to 6
-            character.position = position;
-            
-            // Track lead character (first visible in column)
-            if (position.y > 0 && position.y < minY) {
-                minY = position.y;
-                leadCharacter = character;
-            }
-            
-            // Random character change (reduced from 10% to 5% chance)
-            if (arc4random_uniform(100) < 5) {
-                character.character = [character randomCharacter];
-            }
-            
-            // If character moves off-screen, reset to top
-            if (position.y > self.bounds.size.height) {
-                position.y = -15;
-                character.position = position;
-                character.opacity = 1.0;
-                character.character = [character randomCharacter];
-                
-                // Occasionally change depth/color when recycling (reduced from 30% to 20%)
-                if (arc4random_uniform(100) < 20) {
-                    int depthIndex = arc4random_uniform(4);
-                    character.color = self.depthColors[depthIndex];
-                    character.speed = (0.3 + (arc4random_uniform(12) / 10.0)) * (1.0 - (depthIndex * 0.15));
-                }
-            }
-            
-            // Fade out as it falls
-            if (position.y > self.bounds.size.height - 150) {
-                character.opacity = (self.bounds.size.height - position.y) / 150.0;
-            }
-        }
-        
-        // Highlight lead character with a brighter green (not white) and full opacity
-        if (leadCharacter && arc4random_uniform(100) < 30) {
-            leadCharacter.color = [UIColor colorWithRed:0.0 green:1.0 blue:0.0 alpha:1.0]; // Pure green, not white-ish
-            leadCharacter.opacity = 1.0;
-        }
-    }
-    
-    // Change random characters less frequently (every 45 frames instead of 30)
-    if (frameCount % 45 == 0) {
-        int numChanges = 5 + arc4random_uniform(10); // Reduced from 10-30 to 5-15
-        for (int i = 0; i < numChanges; i++) {
-            int colIndex = arc4random_uniform((uint32_t)self.columns.count);
-            NSMutableArray *column = self.columns[colIndex];
-            
-            if (column.count > 0) {
-                int charIndex = arc4random_uniform((uint32_t)column.count);
-                MatrixRainCharacter *character = column[charIndex];
-                character.character = [character randomCharacter];
-            }
-        }
-    }
-    
-    [self setNeedsDisplay];
-}
-
-- (void)drawRect:(CGRect)rect {
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextClearRect(context, rect);
-    
-    for (NSMutableArray *column in self.columns) {
-        for (MatrixRainCharacter *character in column) {
-            // Skip if outside the visible area
-            if (character.position.y < -20 || character.position.y > self.bounds.size.height + 20) {
-                continue;
-            }
-            
-            // Set the alpha for the character
-            CGContextSetAlpha(context, character.opacity);
-            
-            // Set the color
-            UIColor *drawColor = character.color;
-            CGContextSetFillColorWithColor(context, drawColor.CGColor);
-            
-            // Draw the character
-            [character.character drawAtPoint:character.position 
-                            withAttributes:@{
-                                NSFontAttributeName: [UIFont systemFontOfSize:14.0],
-                                NSForegroundColorAttributeName: drawColor
-                            }];
-            
-            // Enhanced green glow effect for ALL characters (not just some)
-            if (arc4random_uniform(100) < 40) { // Increased chance of glow from 8% to 40%
-                CGContextSaveGState(context);
-                
-                // Create a stronger green glow effect
-                CGFloat glowIntensity = (arc4random_uniform(40) / 100.0) + 0.2; // 0.2-0.6 intensity
-                UIColor *glowColor = [UIColor colorWithRed:0.0 green:1.0 blue:0.0 alpha:glowIntensity];
-                
-                // Draw multiple glow layers
-                for (int i = 1; i <= 3; i++) {
-                    CGFloat offset = i * 0.5;
-                    CGFloat alpha = character.opacity * (0.5 / i);
-                    
-                    CGContextSetAlpha(context, alpha);
-                    [character.character drawAtPoint:CGPointMake(character.position.x + offset, character.position.y)
-                                     withAttributes:@{
-                                         NSFontAttributeName: [UIFont systemFontOfSize:14.0],
-                                         NSForegroundColorAttributeName: glowColor
-                                     }];
-                    
-                    [character.character drawAtPoint:CGPointMake(character.position.x - offset, character.position.y)
-                                     withAttributes:@{
-                                         NSFontAttributeName: [UIFont systemFontOfSize:14.0],
-                                         NSForegroundColorAttributeName: glowColor
-                                     }];
-                    
-                    [character.character drawAtPoint:CGPointMake(character.position.x, character.position.y + offset)
-                                     withAttributes:@{
-                                         NSFontAttributeName: [UIFont systemFontOfSize:14.0],
-                                         NSForegroundColorAttributeName: glowColor
-                                     }];
-                    
-                    [character.character drawAtPoint:CGPointMake(character.position.x, character.position.y - offset)
-                                     withAttributes:@{
-                                         NSFontAttributeName: [UIFont systemFontOfSize:14.0],
-                                         NSForegroundColorAttributeName: glowColor
-                                     }];
-                }
-                
-                CGContextRestoreGState(context);
-            }
-        }
-    }
-}
-
-
-
-@end
 
 
 @interface SecurityTabViewController () <UITextFieldDelegate>
@@ -667,7 +378,7 @@
 
     // Layout constraints
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:770],
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:750],
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:120],
@@ -1064,10 +775,6 @@
     // Refresh network identifiers from the current profile
     [self refreshNetworkIdentifiers];
     
-    // Resume matrix animation if enabled
-    if (self.matrixRainEnabled) {
-        [self.matrixRainView startAnimation];
-    }
 }
 
 // Add a method to refresh network identifiers from the current profile
@@ -1173,16 +880,7 @@
     // Initialize security settings
     self.securitySettings = [[NSUserDefaults alloc] initWithSuiteName:@"com.weaponx.securitySettings"];
     
-    // Add Matrix Rain view (behind everything)
-    self.matrixRainView = [[MatrixRainView alloc] initWithFrame:self.view.bounds];
-    self.matrixRainView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [self.view addSubview:self.matrixRainView];
-    
-    // Check if Matrix Rain is enabled
-    self.matrixRainEnabled = [self.securitySettings boolForKey:@"matrixRainEnabled"];
-    if (self.matrixRainEnabled) {
-        [self.matrixRainView startAnimation];
-    }
+
     
     // Add tap gesture recognizer to dismiss keyboard when tapping elsewhere
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
@@ -1215,8 +913,7 @@
         [contentView.widthAnchor constraintEqualToAnchor:scrollView.widthAnchor]
     ]];
     
-    // Add Matrix Rain toggle control
-    [self setupMatrixControl:contentView];
+
     
     // Add Profile Indicator toggle control
     [self setupProfileIndicatorControl:contentView];
@@ -1251,70 +948,8 @@
     // Add Canvas Fingerprinting control
     [self setupCanvasFingerprintingControl:contentView];
     
-    // Add HYDRA copyright at bottom
-    [self setupCopyrightLabel:contentView];
 }
 
-- (void)setupMatrixControl:(UIView *)contentView {
-    // Create a simple glassmorphic control for Matrix Rain toggle
-    UIVisualEffectView *controlView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialLight]];
-    controlView.layer.cornerRadius = 20;
-    controlView.clipsToBounds = YES;
-    controlView.alpha = 0.8;
-    controlView.translatesAutoresizingMaskIntoConstraints = NO;
-    [contentView addSubview:controlView];
-    
-    // Matrix label
-    self.matrixLabel = [[UILabel alloc] init];
-    self.matrixLabel.text = @"Matrix Rain Effect";
-    self.matrixLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
-    self.matrixLabel.textColor = [UIColor labelColor];
-    self.matrixLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:self.matrixLabel];
-    
-    // Info button with circular background
-    UIView *infoBgView = [[UIView alloc] init];
-    infoBgView.backgroundColor = [UIColor.systemBlueColor colorWithAlphaComponent:0.1];
-    infoBgView.layer.cornerRadius = 12;
-    infoBgView.translatesAutoresizingMaskIntoConstraints = NO;
-    [controlView.contentView addSubview:infoBgView];
-    
-    self.matrixInfoButton = [UIButton buttonWithType:UIButtonTypeInfoLight];
-    self.matrixInfoButton.tintColor = [UIColor systemBlueColor];
-    self.matrixInfoButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.matrixInfoButton addTarget:self action:@selector(showMatrixInfo) forControlEvents:UIControlEventTouchUpInside];
-    [infoBgView addSubview:self.matrixInfoButton];
-    
-    // Matrix toggle switch
-    self.matrixToggleSwitch = [[UISwitch alloc] init];
-    self.matrixToggleSwitch.onTintColor = [UIColor systemBlueColor];
-    self.matrixToggleSwitch.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.matrixToggleSwitch setOn:self.matrixRainEnabled animated:NO];
-    [self.matrixToggleSwitch addTarget:self action:@selector(matrixToggleChanged:) forControlEvents:UIControlEventValueChanged];
-    [controlView.contentView addSubview:self.matrixToggleSwitch];
-    
-    // Position toggle control
-    [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:20],
-        [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
-        [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
-        [controlView.heightAnchor constraintEqualToConstant:60],
-        
-        [self.matrixLabel.leadingAnchor constraintEqualToAnchor:controlView.contentView.leadingAnchor constant:20],
-        [self.matrixLabel.centerYAnchor constraintEqualToAnchor:controlView.contentView.centerYAnchor],
-        
-        [infoBgView.leadingAnchor constraintEqualToAnchor:self.matrixLabel.trailingAnchor constant:10],
-        [infoBgView.centerYAnchor constraintEqualToAnchor:controlView.contentView.centerYAnchor],
-        [infoBgView.widthAnchor constraintEqualToConstant:24],
-        [infoBgView.heightAnchor constraintEqualToConstant:24],
-        
-        [self.matrixInfoButton.centerXAnchor constraintEqualToAnchor:infoBgView.centerXAnchor],
-        [self.matrixInfoButton.centerYAnchor constraintEqualToAnchor:infoBgView.centerYAnchor],
-        
-        [self.matrixToggleSwitch.trailingAnchor constraintEqualToAnchor:controlView.contentView.trailingAnchor constant:-20],
-        [self.matrixToggleSwitch.centerYAnchor constraintEqualToAnchor:controlView.contentView.centerYAnchor]
-    ]];
-}
 
 - (void)setupProfileIndicatorControl:(UIView *)contentView {
     // Create a glassmorphic control for Profile Indicator toggle
@@ -1360,7 +995,7 @@
     
     // Position control under the matrix control
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:100], // Position below Matrix control
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:20], // Position below Matrix control
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:60],
@@ -1425,7 +1060,7 @@
     
     // Position control under the profile indicator control
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:180], // Position below Profile Indicator control
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:100], // Position below Profile Indicator control
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:60],
@@ -1499,7 +1134,7 @@
     
     // Position control under the jailbreak detection control
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:260], // Position below Jailbreak Detection control
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:180], // Position below Jailbreak Detection control
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:60],
@@ -1822,7 +1457,7 @@
     
     // Position control under the network data spoof control
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:340], // Position below Network Data Spoof control
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:260], // Position below Network Data Spoof control
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:200], // Increased height to accommodate carrier details and local IP
@@ -2030,21 +1665,6 @@
     // No nested methods here
 }
 
-- (void)matrixToggleChanged:(UISwitch *)sender {
-    self.matrixRainEnabled = sender.isOn;
-    [self.securitySettings setBool:self.matrixRainEnabled forKey:@"matrixRainEnabled"];
-    
-    if (self.matrixRainEnabled) {
-        [self.matrixRainView startAnimation];
-    } else {
-        [self.matrixRainView stopAnimation];
-    }
-    
-    // Add haptic feedback
-    UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-    [generator prepare];
-    [generator impactOccurred];
-}
 
 - (void)profileIndicatorToggleChanged:(UISwitch *)sender {
     BOOL enabled = sender.isOn;
@@ -2212,65 +1832,6 @@
           enabled ? @"ENABLED" : @"DISABLED");
 }
 
-- (void)showMatrixInfo {
-    UIAlertController *alert = [UIAlertController 
-                               alertControllerWithTitle:@"Matrix Rain Effect"
-                               message:@"Enables the Matrix-style rain animation in the background of the Security tab. This effect is optimized to use minimal system resources."
-                               preferredStyle:UIAlertControllerStyleAlert];
-    
-    UIAlertAction *okAction = [UIAlertAction 
-                              actionWithTitle:@"OK" 
-                              style:UIAlertActionStyleDefault 
-                              handler:nil];
-    
-    [alert addAction:okAction];
-    
-    // Find top view controller to present the alert
-    UIViewController *rootVC = nil;
-    
-    // For iOS 13 and above, use the window scene approach
-    if (@available(iOS 13.0, *)) {
-        // Cast to the right type to avoid incompatible pointer types warning
-        NSSet<UIScene *> *connectedScenes = [UIApplication sharedApplication].connectedScenes;
-        for (UIScene *scene in connectedScenes) {
-            if (scene.activationState == UISceneActivationStateForegroundActive && 
-                [scene isKindOfClass:[UIWindowScene class]]) {
-                UIWindowScene *windowScene = (UIWindowScene *)scene;
-                for (UIWindow *window in windowScene.windows) {
-                    if (window.isKeyWindow) {
-                        rootVC = window.rootViewController;
-                        break;
-                    }
-                }
-                if (rootVC) break;
-            }
-        }
-        
-        // Fallback if we couldn't find the key window
-        if (!rootVC && connectedScenes.count > 0) {
-            for (UIScene *scene in connectedScenes) {
-                if ([scene isKindOfClass:[UIWindowScene class]]) {
-                    UIWindowScene *windowScene = (UIWindowScene *)scene;
-                    rootVC = windowScene.windows.firstObject.rootViewController;
-                    if (rootVC) break;
-                }
-            }
-        }
-    } else {
-        // Fallback for iOS 12 and below
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        rootVC = [UIApplication sharedApplication].delegate.window.rootViewController;
-#pragma clang diagnostic pop
-    }
-    
-    // Navigate through presented view controllers to find the topmost one
-    while (rootVC.presentedViewController) {
-        rootVC = rootVC.presentedViewController;
-    }
-    
-    [rootVC presentViewController:alert animated:YES completion:nil];
-}
 
 - (void)showProfileIndicatorInfo {
     UIAlertController *alert = [UIAlertController 
@@ -2626,7 +2187,7 @@
 
     // Position above Setup Alert Checks (e.g., top: 790)
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:920],
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:900],
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:60],
@@ -2712,7 +2273,7 @@
 
     // Layout constraints
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:1230],
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:980],
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:140],
@@ -2898,48 +2459,9 @@
     [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)setupCopyrightLabel:(UIView *)contentView {
-    // Create copyright label
-    self.copyrightLabel = [[UILabel alloc] init];
-    self.copyrightLabel.text = @" HYDRA SECURE SYSTEMS • ALL RIGHTS RESERVED";
-    self.copyrightLabel.font = [UIFont fontWithName:@"Menlo" size:10.0] ?: [UIFont monospacedSystemFontOfSize:10.0 weight:UIFontWeightRegular];
-    self.copyrightLabel.textColor = [UIColor colorWithRed:0.2 green:0.8 blue:0.2 alpha:0.8]; // Matrix green
-    self.copyrightLabel.textAlignment = NSTextAlignmentCenter;
-    self.copyrightLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.copyrightLabel.alpha = 0.7;
-    [contentView addSubview:self.copyrightLabel];
-    
-    // Add subtle glow effect
-    self.copyrightLabel.layer.shadowColor = [UIColor colorWithRed:0.0 green:1.0 blue:0.0 alpha:1.0].CGColor;
-    self.copyrightLabel.layer.shadowOffset = CGSizeZero;
-    self.copyrightLabel.layer.shadowRadius = 3.0;
-    self.copyrightLabel.layer.shadowOpacity = 0.3;
-    
-    // Position at the bottom of the page after the Canvas Fingerprinting control
-    [NSLayoutConstraint activateConstraints:@[
-        [self.copyrightLabel.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
-        [self.copyrightLabel.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor],
-        [self.copyrightLabel.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:1670], // Positioned after Canvas Fingerprinting (1530 + 120 + 20)
-        [self.copyrightLabel.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-30] // More bottom padding
-    ]];
-    
-    // Add subtle pulsing animation
-    [self animateCopyrightLabel];
-}
-
-- (void)animateCopyrightLabel {
-    [UIView animateWithDuration:2.5 delay:0 options:UIViewAnimationOptionAutoreverse | UIViewAnimationOptionRepeat animations:^{
-        self.copyrightLabel.alpha = 0.5;
-    } completion:^(BOOL finished) {
-        self.copyrightLabel.alpha = 0.7;
-    }];
-}
-
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
     
-    // Pause matrix animation when view is not visible
-    [self.matrixRainView stopAnimation];
 }
 
 // Method to dismiss keyboard when tapping outside text fields
@@ -3193,7 +2715,7 @@
     
     // Position control under the network connection type control
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:520], // Increased spacing below Network Connection Type
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:480], // Increased spacing below Network Connection Type
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:100], // Maintain height for vertical layout
@@ -3435,7 +2957,7 @@
     
     // Position control under the device specific spoofing control
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:645], // Increased spacing below Device Specific Spoofing
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:605], // Increased spacing below Device Specific Spoofing
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:100], // Increased height to accommodate vertical layout
@@ -3988,7 +3510,7 @@
     // Layout constraints
     [NSLayoutConstraint activateConstraints:@[
         // Control view
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:1390], // Position between App Version Spoofing and Canvas Fingerprinting
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:1150], // Position between App Version Spoofing and Canvas Fingerprinting
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:120],
@@ -4164,7 +3686,7 @@
     
     // Position control between Domain Blocking and Copyright label
     [NSLayoutConstraint activateConstraints:@[
-        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:1530], // Moved down to be below Domain Blocking
+        [controlView.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:1300], // Moved down to be below Domain Blocking
         [controlView.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:20],
         [controlView.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-20],
         [controlView.heightAnchor constraintEqualToConstant:120],
@@ -4199,7 +3721,14 @@
         
         // Position toggle switch at the right side of bottom row
         [self.canvasFingerprintingToggleSwitch.trailingAnchor constraintEqualToAnchor:bottomRowContainer.trailingAnchor],
-        [self.canvasFingerprintingToggleSwitch.centerYAnchor constraintEqualToAnchor:bottomRowContainer.centerYAnchor]
+        [self.canvasFingerprintingToggleSwitch.centerYAnchor constraintEqualToAnchor:bottomRowContainer.centerYAnchor],
+    ]];
+    // 在 setupCanvasFingerprintingControl: 方法的约束数组最后添加：
+    [NSLayoutConstraint activateConstraints:@[
+        // ... 你现有的所有约束 ...
+        
+        // 添加这个关键约束：将 contentView 的底部锚定到 controlView 的底部
+        [contentView.bottomAnchor constraintEqualToAnchor:controlView.bottomAnchor constant:50]
     ]];
 }
 

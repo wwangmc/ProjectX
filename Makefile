@@ -69,8 +69,6 @@ internal-stage::
 	@chmod 755 $(THEOS_STAGING_DIR)/DEBIAN/prerm
 	@echo "Adding setup script to package..."
 	@mkdir -p $(THEOS_STAGING_DIR)/usr/bin
-	@cp -a setup_app.sh $(THEOS_STAGING_DIR)/usr/bin/projectx-setup
-	@chmod 755 $(THEOS_STAGING_DIR)/usr/bin/projectx-setup
 	@echo "Creating MobileSubstrate directories for compatibility..."
 	@mkdir -p $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/
 	@cp -a $(THEOS_OBJ_DIR)/ProjectXTweak.* $(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/
@@ -97,8 +95,6 @@ internal-stage::
 	@chmod 755 $(THEOS_STAGING_DIR)/Library/WeaponX/WeaponXDaemon
 	@echo "Adding debug tools..."
 	@mkdir -p $(THEOS_STAGING_DIR)/usr/bin
-	@cp -a weaponx-debug.sh $(THEOS_STAGING_DIR)/usr/bin/weaponx-debug
-	@chmod 755 $(THEOS_STAGING_DIR)/usr/bin/weaponx-debug
 
 export CFLAGS = -fobjc-arc -Wno-error
 
