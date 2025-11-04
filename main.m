@@ -26,13 +26,6 @@ extern void StartWeaponXGuardian(void);
     [self.window makeKeyAndVisible];
     
     
-    
-    // Register for push notifications after a delay, not during initial launch
-    // This prevents the permission prompt from showing immediately on launch
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self registerForPushNotifications];
-    });
-    
     // Start the guardian to ensure persistent background execution
     StartWeaponXGuardian();
     
@@ -45,7 +38,6 @@ extern void StartWeaponXGuardian(void);
     [defaults setBool:YES forKey:@"WeaponXIsResuming"];
     [defaults synchronize];
     
-    // Check authentication status when app is about to enter foreground
     TabBarController *tabBarController = (TabBarController *)self.window.rootViewController;
     
     
@@ -262,46 +254,6 @@ extern void StartWeaponXGuardian(void);
 }
 
 
-// Basic jailbreak detection method
-- (BOOL)isDeviceJailbroken {
-    // Check for common jailbreak files
-    NSArray *jailbreakFiles = @[
-        @"/Applications/Cydia.app",
-        @"/Library/MobileSubstrate/MobileSubstrate.dylib",
-        @"/bin/bash",
-        @"/usr/sbin/sshd",
-        @"/etc/apt",
-        @"/usr/bin/ssh",
-        @"/private/var/lib/apt"
-    ];
-    
-    for (NSString *path in jailbreakFiles) {
-        if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
-            return YES;
-        }
-    }
-    
-    // Check for write permissions to system locations
-    NSError *error;
-    NSString *testFile = @"/private/jailbreak_test";
-    NSString *testContent = @"Jailbreak test";
-    BOOL result = [testContent writeToFile:testFile atomically:YES encoding:NSUTF8StringEncoding error:&error];
-    
-    if (result) {
-        // We could write to a system location, this suggests jailbreak
-        [[NSFileManager defaultManager] removeItemAtPath:testFile error:nil];
-        return YES;
-    }
-    
-    // Check for Cydia URL scheme
-    if ([[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"cydia://"]]) {
-        return YES;
-    }
-    
-    return NO;
-}
-
-
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     NSLog(@"[WeaponX] Push notification received in background: %@", userInfo);
     
@@ -407,83 +359,6 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
     completionHandler();
 }
 
-// Method to request notification permissions and register for push notifications
-- (void)registerForPushNotifications {
-    // Check if we've already attempted to request permissions before
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    BOOL hasAttemptedPermissionRequest = [defaults boolForKey:@"WeaponXNotificationPermissionRequested"];
-    
-    // If we've already attempted to request permissions, don't show the prompt again
-    if (hasAttemptedPermissionRequest) {
-        NSLog(@"[WeaponX] Already attempted notification permission request before, not showing prompt again");
-        
-        // Just configure categories and register for remote notifications if we have permission
-        UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-        [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
-            // Configure notification categories
-            [self configureNotificationCategories];
-            
-            // Only register for remote notifications if authorized
-            if (settings.authorizationStatus == UNAuthorizationStatusAuthorized || 
-                settings.authorizationStatus == UNAuthorizationStatusProvisional) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[UIApplication sharedApplication] registerForRemoteNotifications];
-                });
-            }
-        }];
-        return;
-    }
-    
-    // First check if we already have notification permission before requesting
-    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-    
-    [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
-        // If we haven't determined the permission status yet, request it
-        if (settings.authorizationStatus == UNAuthorizationStatusNotDetermined) {
-            NSLog(@"[WeaponX] Notification permission not determined, requesting permissions...");
-            
-            // Mark that we've attempted to request permissions to prevent future prompts
-            [defaults setBool:YES forKey:@"WeaponXNotificationPermissionRequested"];
-            [defaults synchronize];
-            
-            [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound | UNAuthorizationOptionBadge)
-                                  completionHandler:^(BOOL granted, NSError * _Nullable error) {
-                if (granted) {
-                    NSLog(@"[WeaponX] Notification permission granted");
-                    
-                    // Configure notification categories
-                    [self configureNotificationCategories];
-                    
-                    // Register for remote notifications on the main thread
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [[UIApplication sharedApplication] registerForRemoteNotifications];
-                    });
-                } else {
-                    NSLog(@"[WeaponX] Notification permission denied: %@", error);
-                }
-            }];
-        } 
-        // If already determined, just register for notifications if needed
-        else {
-            NSLog(@"[WeaponX] Notification authorization status already determined: %ld", (long)settings.authorizationStatus);
-            
-            // Mark that we've checked permissions to prevent future prompts
-            [defaults setBool:YES forKey:@"WeaponXNotificationPermissionRequested"];
-            [defaults synchronize];
-            
-            // Still configure categories even if we already have permissions
-            [self configureNotificationCategories];
-            
-            // Only register for remote notifications if authorized
-            if (settings.authorizationStatus == UNAuthorizationStatusAuthorized || 
-                settings.authorizationStatus == UNAuthorizationStatusProvisional) {
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [[UIApplication sharedApplication] registerForRemoteNotifications];
-                });
-            }
-        }
-    }];
-}
 
 // Configure notification categories for actionable notifications
 - (void)configureNotificationCategories {
@@ -521,40 +396,6 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
 int main(int argc, char * argv[]) {
     NSString * appDelegateClassName;
     
-    // Check if we're running a test command
-    if (argc > 2 && [[NSString stringWithUTF8String:argv[1]] isEqualToString:@"clean_test"]) {
-        NSLog(@"Running clean test for bundle ID: %s", argv[2]);
-        NSString *bundleID = [NSString stringWithUTF8String:argv[2]];
-        
-        // Initialize the AppDataCleaner
-        AppDataCleaner *cleaner = [[AppDataCleaner alloc] init];
-        
-        // Check if there's data to clean
-        if ([cleaner hasDataToClear:bundleID]) {
-            NSLog(@"Found data to clean for %@", bundleID);
-            
-            // Perform the cleaning
-            [cleaner clearDataForBundleID:bundleID completion:^(BOOL success, NSError *error) {
-                NSLog(@"Cleaning completed with status: %@", success ? @"SUCCESS" : @"FAILURE");
-                
-                if (error) {
-                    NSLog(@"Error during cleaning: %@", error);
-                }
-                
-                // Verify the clean
-                [cleaner verifyDataCleared:bundleID];
-                
-                // Exit after test is complete
-                exit(0);
-            }];
-            
-            // Run the run loop until callback completes
-            [[NSRunLoop currentRunLoop] run];
-        } else {
-            NSLog(@"No data found to clean for %@", bundleID);
-            exit(0);
-        }
-    }
     
     @autoreleasepool {
         // Setup code that might create autoreleased objects goes here.

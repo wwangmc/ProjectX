@@ -30,68 +30,7 @@ static NSTimeInterval kCacheValidityDuration = 300.0; // 5 minutes
 
 // Check if device model spoofing is enabled for the current app with caching
 static BOOL isDeviceModelSpoofingEnabled() {
-    NSString *currentBundleID = [[NSBundle mainBundle] bundleIdentifier];
-    if (!currentBundleID) return NO;
-    
-    // Initialize cache if needed
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        cachedBundleDecisions = [NSMutableDictionary dictionary];
-    });
-    
-    // Check cache first
-    @synchronized(cachedBundleDecisions) {
-        NSNumber *cachedDecision = cachedBundleDecisions[currentBundleID];
-        NSDate *decisionTimestamp = cachedBundleDecisions[[currentBundleID stringByAppendingString:@"_timestamp"]];
-        
-        if (cachedDecision && decisionTimestamp && 
-            [[NSDate date] timeIntervalSinceDate:decisionTimestamp] < kCacheValidityDuration) {
-            return [cachedDecision boolValue];
-        }
-    }
-    
-    // If not cached or expired, check if this app is enabled for spoofing
-    BOOL shouldSpoof = NO;
-    @try {
-        // Get IdentifierManager to check if app is in scope
-        if (!NSClassFromString(@"IdentifierManager")) {
-            return NO;
-        }
-        
-        IdentifierManager *manager = [NSClassFromString(@"IdentifierManager") sharedManager];
-        if (!manager || ![manager isApplicationEnabled:currentBundleID]) {
-            shouldSpoof = NO;
-        } else {
-            // Check if device model spoofing is specifically enabled
-            shouldSpoof = [manager isIdentifierEnabled:@"DeviceModel"];
-            
-            // If the direct check fails, try profile settings directly
-            if (!shouldSpoof) {
-                // Try to get profile settings directly from file
-                NSString *profilesPath = @"/var/jb/var/mobile/Library/WeaponX/Profiles";
-                NSString *centralInfoPath = [profilesPath stringByAppendingPathComponent:@"current_profile_info.plist"];
-                NSDictionary *centralInfo = [NSDictionary dictionaryWithContentsOfFile:centralInfoPath];
-                
-                NSString *profileId = centralInfo[@"ProfileId"];
-                if (profileId) {
-                    NSString *profileSettingsPath = [profilesPath stringByAppendingPathComponent:[profileId stringByAppendingPathComponent:@"settings.plist"]];
-                    NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:profileSettingsPath];
-                    shouldSpoof = [settings[@"deviceModelEnabled"] boolValue];
-                }
-            }
-        }
-    } @catch (NSException *exception) {
-        PXLog(@"[model] Exception checking if device model spoofing is enabled: %@", exception);
-        shouldSpoof = NO;
-    }
-    
-    // Cache the decision
-    @synchronized(cachedBundleDecisions) {
-        cachedBundleDecisions[currentBundleID] = @(shouldSpoof);
-        cachedBundleDecisions[[currentBundleID stringByAppendingString:@"_timestamp"]] = [NSDate date];
-    }
-    
-    return shouldSpoof;
+    return true;
 }
 
 // Cache for device model values
@@ -841,13 +780,7 @@ static void logDeviceModelAccess(const char* method, NSString* bundleID) {
             return;
         }
         
-        // Use our optimized check function for determining if this app should be hooked
-        if (!isDeviceModelSpoofingEnabled()) {
-            PXLog(@"[model] Device model spoofing not enabled for app %@, not initializing hooks", currentBundleID);
-            return;
-        } else {
-            PXLog(@"[model] Device model spoofing is enabled for app %@", currentBundleID);
-        }
+
         
         // Test if we can retrieve a spoofed model before proceeding
         NSString *testModel = getSpoofedDeviceModel();

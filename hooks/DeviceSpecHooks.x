@@ -184,78 +184,7 @@ static BOOL isInScopedAppsList(void) {
 
 // Check if device model spoofing is enabled for the current app with caching
 static BOOL isSpoofingEnabled(void) {
-    NSString *currentBundleID = getCurrentBundleID();
-    if (!currentBundleID) return NO;
-    
-    // Initialize cache if needed
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        cachedBundleDecisions = [NSMutableDictionary dictionary];
-    });
-    
-    // Check cache first
-    @synchronized(cachedBundleDecisions) {
-        NSNumber *cachedDecision = cachedBundleDecisions[currentBundleID];
-        NSDate *decisionTimestamp = cachedBundleDecisions[[currentBundleID stringByAppendingString:@"_timestamp"]];
-        
-        if (cachedDecision && decisionTimestamp && 
-            [[NSDate date] timeIntervalSinceDate:decisionTimestamp] < kCacheValidityDuration) {
-            return [cachedDecision boolValue];
-        }
-    }
-    
-    // Always exclude system processes
-    if ([currentBundleID hasPrefix:@"com.apple."] && 
-        ![currentBundleID isEqualToString:@"com.apple.mobilesafari"] &&
-        ![currentBundleID isEqualToString:@"com.apple.webapp"]) {
-        @synchronized(cachedBundleDecisions) {
-            cachedBundleDecisions[currentBundleID] = @NO;
-            cachedBundleDecisions[[currentBundleID stringByAppendingString:@"_timestamp"]] = [NSDate date];
-        }
-        return NO;
-    }
-    
-    // Check if the current app is a scoped app AND if device model spoofing is enabled
-    BOOL shouldSpoof = NO;
-    @try {
-        // First check if this app is in the scoped apps list
-        BOOL isScoped = isInScopedAppsList();
-        if (!isScoped) {
-            shouldSpoof = NO;
-        } else {
-            // Now check if device model spoofing is specifically enabled
-            if (NSClassFromString(@"IdentifierManager")) {
-                IdentifierManager *manager = [NSClassFromString(@"IdentifierManager") sharedManager];
-                shouldSpoof = [manager isIdentifierEnabled:@"DeviceModel"];
-                
-                // If the direct check fails, try profile settings directly
-                if (!shouldSpoof) {
-                    // Try to get profile settings directly from file
-                    NSString *profilesPath = @"/var/jb/var/mobile/Library/WeaponX/Profiles";
-                    NSString *centralInfoPath = [profilesPath stringByAppendingPathComponent:@"current_profile_info.plist"];
-                    NSDictionary *centralInfo = [NSDictionary dictionaryWithContentsOfFile:centralInfoPath];
-                    
-                    NSString *profileId = centralInfo[@"ProfileId"];
-                    if (profileId) {
-                        NSString *profileSettingsPath = [profilesPath stringByAppendingPathComponent:[profileId stringByAppendingPathComponent:@"settings.plist"]];
-                        NSDictionary *settings = [NSDictionary dictionaryWithContentsOfFile:profileSettingsPath];
-                        shouldSpoof = [settings[@"deviceModelEnabled"] boolValue];
-                    }
-                }
-            }
-        }
-    } @catch (NSException *exception) {
-        PXLog(@"[DeviceSpec] Exception checking if device model spoofing is enabled: %@", exception);
-        shouldSpoof = NO;
-    }
-    
-    // Cache the decision
-    @synchronized(cachedBundleDecisions) {
-        cachedBundleDecisions[currentBundleID] = @(shouldSpoof);
-        cachedBundleDecisions[[currentBundleID stringByAppendingString:@"_timestamp"]] = [NSDate date];
-    }
-    
-    return shouldSpoof;
+    return true;
 }
 
 // Get the device model from profile
@@ -1619,7 +1548,8 @@ static kern_return_t hook_host_statistics64(host_t host, host_flavor_t flavor, h
 static int hook_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
     // Always call original function first to ensure proper behavior
     int result = orig_sysctlbyname(name, oldp, oldlenp, newp, newlen);
-    
+    PXLog(@"[DeviceSpec] syshooks start name:%s",name);
+
     // Return original result if conditions not met
     if (result != 0 || !name || !oldp || !oldlenp || *oldlenp == 0 || !isSpoofingEnabled()) {
         return result;
@@ -1630,11 +1560,12 @@ static int hook_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, void
     if (!specs) {
         return result;
     }
-    
+
     // Get CPU architecture for processor-related sysctls
     NSString *cpuArchitecture = specs[@"cpuArchitecture"];
     NSInteger cpuCoreCount = [specs[@"cpuCoreCount"] integerValue];
     
+
     // Handle CPU-related sysctls
     if (strcmp(name, "hw.ncpu") == 0 || strcmp(name, "hw.activecpu") == 0) {
         // Number of CPUs / Active CPUs

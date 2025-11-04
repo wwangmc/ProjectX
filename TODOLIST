@@ -3,3 +3,16 @@ fishook inlinehook没使用
 apiManager管理请求
 TabBarController为主页面
 AppDataBackupRestoreViewController 备份及复原应用数据 实际代码没写
+hw.product
+hw.machine
+kern.osproductversion
+hw.ncpu
+sysctl.proc_translated
+hw.pagesize
+hw.model
+kern.boottime
+hw.memsize
+hw.logicalcpu_max
+hw.physicalcpu_max
+
+NXGetLocalArchInfo 获取CPU架构

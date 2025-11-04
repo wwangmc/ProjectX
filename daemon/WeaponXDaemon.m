@@ -5,7 +5,9 @@
 #import <fcntl.h>
 #import <unistd.h>
 #import <os/log.h>
-
+/**
+    保持ProjectX持续运行
+*/
 // Constants
 static const int kCheckInterval = 5; // Check every 5 seconds
 static NSString *kGuardianDir = nil; // Will be initialized in init

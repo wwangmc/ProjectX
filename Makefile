@@ -1,10 +1,28 @@
-TARGET := iphone:clang:16.5:15.0
+# TARGET := iphone:clang:16.5:15.0
 ARCHS = arm64 arm64e
-ROOTLESS = 1
+# ROOTLESS = 1
 LOGOS_DEFAULT_GENERATOR = internal
 INSTALL_TARGET_PROCESSES = SpringBoard ProjectX
 DEBUG=0
 FINALPACKAGE=1
+
+# 定义打包模式常量
+ROOTFULL = 0
+ROOTLESS = 1
+ROOTHIDE = 2
+
+# 默认使用 rootfull (0)，可通过命令行覆盖，如 `make TYPE=1` 选择 rootless
+TYPE ?= $(ROOTLESS)
+
+TARGET = iphone:clang:16.5:15.0
+ifeq ($(TYPE), $(ROOTLESS))
+    THEOS_PACKAGE_SCHEME = rootless
+else ifeq ($(TYPE), $(ROOTHIDE))
+    THEOS_PACKAGE_SCHEME = roothide
+else 
+	TARGET = iphone:clang:16.5:12.0
+endif
+
 # Ensure rootless paths
 THEOS_PACKAGE_SCHEME = rootless
 THEOS_PACKAGE_INSTALL_PREFIX = /var/jb
@@ -38,7 +56,7 @@ ProjectX_CODESIGN_FLAGS = -Sent.plist
 ProjectX_CFLAGS = -fobjc-arc -D SUPPORT_IPAD=1 -D ENABLE_STATE_RESTORATION=1  -I./common
 
 # Daemon files
-WeaponXDaemon_FILES = WeaponXDaemon.m
+WeaponXDaemon_FILES = daemon/WeaponXDaemon.m
 WeaponXDaemon_CFLAGS = -fobjc-arc
 WeaponXDaemon_FRAMEWORKS = Foundation IOKit
 WeaponXDaemon_INSTALL_PATH = /Library/WeaponX
@@ -93,16 +111,8 @@ internal-stage::
 	@echo "Installing WeaponXDaemon..."
 	@cp -a $(THEOS_OBJ_DIR)/WeaponXDaemon $(THEOS_STAGING_DIR)/Library/WeaponX/
 	@chmod 755 $(THEOS_STAGING_DIR)/Library/WeaponX/WeaponXDaemon
-	@echo "Adding debug tools..."
-	@mkdir -p $(THEOS_STAGING_DIR)/usr/bin
 
 export CFLAGS = -fobjc-arc -Wno-error
-
-ProjectXCLI_FILES = ProjectXCLIbinary.m DeviceNameManager.m IdentifierManager.m IDFAManager.m IDFVManager.m WiFiManager.m SerialNumberManager.m ProjectXLogging.m ProfileManager.m IOSVersionInfo.m
-ProjectXCLI_CFLAGS = -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -I$(THEOS_VENDOR_INCLUDE_PATH)
-ProjectXCLI_FRAMEWORKS = UIKit Foundation AdSupport UserNotifications IOKit Security
-ProjectXCLI_PRIVATE_FRAMEWORKS = MobileCoreServices AppSupport
-ProjectXCLI_LDFLAGS = -L$(THEOS_VENDOR_LIBRARY_PATH)
 
 after-package::
 	@echo "🔍 Checking package contents..."
