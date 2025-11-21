@@ -14,6 +14,7 @@
 #import <objc/runtime.h>
 #import <substrate.h>
 #import <ellekit/ellekit.h>
+#import <mach-o/arch.h>
 
 // Define the swap usage structure if it's not available
 #ifndef HAVE_XSW_USAGE
@@ -30,7 +31,7 @@ typedef struct xsw_usage xsw_usage;
 // Original function pointers
 static int (*orig_sysctlbyname)(const char *name, void *oldp, size_t *oldlenp, void *newp, size_t newlen);
 static kern_return_t (*orig_host_statistics64)(host_t host, host_flavor_t flavor, host_info64_t info, mach_msg_type_number_t *count);
-
+static NXArchInfo* (* orig_nx_get_local_arch_info)();
 // Path to scoped apps plist
 static NSString *const kScopedAppsPath = @"/var/jb/var/mobile/Library/Preferences/com.hydra.projectx.global_scope.plist";
 static NSString *const kScopedAppsPathAlt1 = @"/var/jb/private/var/mobile/Library/Preferences/com.hydra.projectx.global_scope.plist";
@@ -71,6 +72,8 @@ static void getConsistentMemoryStats(unsigned long long totalMemory,
                                     unsigned long long *inactiveMemory);
 static kern_return_t hook_host_statistics64(host_t host, host_flavor_t flavor, host_info64_t info, mach_msg_type_number_t *count);
 static int hook_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, void *newp, size_t newlen);
+static NXArchInfo* hook_nx_get_local_arch_info();
+
 static void refreshCaches(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo);
 static CGSize parseResolution(NSString *resolutionString);
 
@@ -1335,6 +1338,11 @@ static void refreshCaches(CFNotificationCenterRef center, void *observer, CFStri
                     PXLog(@"[DeviceSpec] Successfully hooked host_statistics64 for memory stats spoofing");
                 }
                 
+                orig_nx_get_local_arch_info = dlsym(libSystem, "NXGetLocalArchInfo");
+                if(orig_nx_get_local_arch_info){
+                    MSHookFunction(orig_nx_get_local_arch_info, (void *)hook_nx_get_local_arch_info, (void **)&orig_nx_get_local_arch_info);
+                    PXLog(@"[DeviceSpec] Successfully hooked nx_get_local_arch_info for memory stats spoofing");
+                }
                 dlclose(libSystem);
             }
             
@@ -1433,7 +1441,85 @@ static void getConsistentMemoryStats(unsigned long long totalMemory,
         *inactiveMemory = (unsigned long long)(totalMemory * inactivePercentage);
     }
 }
-
+static NXArchInfo* hook_nx_get_local_arch_info()
+{
+    NXArchInfo* original = orig_nx_get_local_arch_info();
+    
+    NSDictionary *specs = getDeviceSpecs();
+    if (!specs) {
+        return original;
+    }
+    
+    NSString *cpuArchitecture = specs[@"cpuArchitecture"];
+    if (!cpuArchitecture) {
+        return original;
+    }
+    
+    // 创建新的结构体，不要修改原始结构体
+    static NXArchInfo customArchInfo;
+    customArchInfo = *original; // 复制原始值
+    
+    // 安全地设置 subtype
+    cpu_subtype_t cpuSubtype = original->cpusubtype; // 保持原始值
+    const char *customDescription = original->description; // 默认使用原始描述
+    
+    // 根据架构设置 subtype 和描述
+    if ([cpuArchitecture containsString:@"A9"]) {
+        cpuSubtype = 2;
+    } else if ([cpuArchitecture containsString:@"A10"]) {
+        cpuSubtype = 3;
+    } else if ([cpuArchitecture containsString:@"A11"]) {
+        cpuSubtype = 4;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A12"]) {
+        cpuSubtype = 5;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A13"]) {
+        cpuSubtype = 6;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A14"]) {
+        cpuSubtype = 7;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A15"]) {
+        cpuSubtype = 8;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A16"]) {
+        cpuSubtype = 9;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A17"]) {
+        cpuSubtype = 10;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"A18"]) {
+        cpuSubtype = 11;
+        customDescription = "ARM64E";
+    } else if ([cpuArchitecture containsString:@"M1"]) {
+        cpuSubtype = 12;
+        customDescription = "arm64v8 Apple M1";
+    } else if ([cpuArchitecture containsString:@"M2"]) {
+        cpuSubtype = 13;
+        customDescription = "arm64v8 Apple M2";
+    } else if ([cpuArchitecture containsString:@"M3"]) {
+        cpuSubtype = 14;
+        customDescription = "arm64v8 Apple M3";
+    } else if ([cpuArchitecture containsString:@"M4"]) {
+        cpuSubtype = 15;
+        customDescription = "arm64v8 Apple M4";
+    }
+    // 如果没有匹配，保持原始 subtype 和描述
+    
+    customArchInfo.cpusubtype = cpuSubtype;
+    customArchInfo.description = customDescription;
+    
+    PXLog(@"[DeviceSpec] ArchInfo hook - name:%s cputype:%d cpusubtype:%d->%d description:%s->%s",
+          customArchInfo.name, 
+          customArchInfo.cputype, 
+          original->cpusubtype, 
+          cpuSubtype,
+          original->description,
+          customDescription);
+    
+    return &customArchInfo;
+}
 // Host statistics hook for memory stats
 static kern_return_t hook_host_statistics64(host_t host, host_flavor_t flavor, host_info64_t info, mach_msg_type_number_t *count) {
     // Call original function first
@@ -1548,7 +1634,6 @@ static kern_return_t hook_host_statistics64(host_t host, host_flavor_t flavor, h
 static int hook_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
     // Always call original function first to ensure proper behavior
     int result = orig_sysctlbyname(name, oldp, oldlenp, newp, newlen);
-    PXLog(@"[DeviceSpec] syshooks start name:%s",name);
 
     // Return original result if conditions not met
     if (result != 0 || !name || !oldp || !oldlenp || *oldlenp == 0 || !isSpoofingEnabled()) {
@@ -1959,6 +2044,8 @@ static int hook_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, void
                 }
             }
         }
+    }else{
+        PXLog(@"[DeviceSpec] ***not hooked name:%s",name);
     }
     
     return result;

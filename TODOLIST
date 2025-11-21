@@ -16,3 +16,6 @@ hw.logicalcpu_max
 hw.physicalcpu_max
 
 NXGetLocalArchInfo 获取CPU架构
+
+每次打开ios版本号随机没固定住
+safari清理/var/mobile/Library/Safari 不然打开会跳出之前的东西
