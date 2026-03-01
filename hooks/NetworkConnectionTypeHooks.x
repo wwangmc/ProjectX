@@ -41,7 +41,7 @@ static const NSTimeInterval kMinNetworkTypeChangeDuration = 120.0; // Minimum 2 
 
 // Get the current ISO country code from security settings
 static NSString *getCurrentISOCountryCode() {
-    return @"us";
+    return CurrentPhoneInfo().networkInfo.countryCode;
 }
 
 
@@ -78,43 +78,17 @@ static NSString * __attribute__((unused)) getCurrentLocalIPAddress() {
 
 
 
-// For Auto mode, decide randomly between WiFi and Cellular
-static BOOL shouldUseWiFiForAutoMode() {
-    // Use a persistent seed for the current process to ensure consistent behavior
-    static BOOL isWiFi = NO;
-    static dispatch_once_t onceToken;
-    
-    dispatch_once(&onceToken, ^{
-        isWiFi = arc4random_uniform(2) == 0; // 50% chance
-        PXLog(@"[NetworkHook] Auto mode initialized as: %@", isWiFi ? @"WiFi" : @"Cellular");
-    });
-    
-    return isWiFi;
-}
-
-
 // Helper to check if we should show as WiFi
 static BOOL shouldShowAsWiFi() {
     NetworkConnectionType type = CurrentPhoneInfo().networkInfo.connectionType;
     
-    if (type == NetworkConnectionTypeWiFi) {
-        return YES;
-    } else if (type == NetworkConnectionTypeAuto && shouldUseWiFiForAutoMode()) {
-        return YES;
-    }
-    
-    return NO;
+    return type == NetworkConnectionTypeWiFi;
 }
 
 // Helper to check if we should show as Cellular
 static BOOL shouldShowAsCellular() {
     NetworkConnectionType type = CurrentPhoneInfo().networkInfo.connectionType;
-    if (type == NetworkConnectionTypeCellular) {
-        return YES;
-    } else if (type == NetworkConnectionTypeAuto && !shouldUseWiFiForAutoMode()) {
-        return YES;
-    }
-    return NO;
+    return type == NetworkConnectionTypeCellular;
 }
 
 
@@ -130,8 +104,7 @@ static int getWiFiSignalStrength() {
         NetworkConnectionType connectionType = CurrentPhoneInfo().networkInfo.connectionType;
         int targetSignal;
         
-        if (connectionType == NetworkConnectionTypeWiFi || 
-            (connectionType == NetworkConnectionTypeAuto && shouldUseWiFiForAutoMode())) {
+        if (connectionType == NetworkConnectionTypeWiFi) {
             // For WiFi mode, generally have good to excellent signal (realistic for most environments)
             int signalBase = arc4random_uniform(100);
             if (signalBase < 60) {
@@ -144,8 +117,7 @@ static int getWiFiSignalStrength() {
                 // 10% chance of fair signal
                 targetSignal = kWiFiSignalStrengthFair + (arc4random_uniform(8) - 4);  // -74 to -66 dBm
             }
-        } else if (connectionType == NetworkConnectionTypeCellular ||
-                  (connectionType == NetworkConnectionTypeAuto && !shouldUseWiFiForAutoMode())) {
+        } else if (connectionType == NetworkConnectionTypeCellular) {
             // For cellular mode, have slightly weaker WiFi (realistic for mobile scenarios)
             int signalBase = arc4random_uniform(100);
             if (signalBase < 20) {
@@ -206,8 +178,7 @@ static int getCellularSignalBars() {
         NetworkConnectionType connectionType = CurrentPhoneInfo().networkInfo.connectionType;
         int targetBars;
         
-        if (connectionType == NetworkConnectionTypeCellular || 
-            (connectionType == NetworkConnectionTypeAuto && !shouldUseWiFiForAutoMode())) {
+        if (connectionType == NetworkConnectionTypeCellular) {
             // For cellular mode, generally have good signal (3-5 bars)
             int signalBase = arc4random_uniform(100);
             if (signalBase < 40) {
@@ -220,8 +191,7 @@ static int getCellularSignalBars() {
                 // 20% chance of 3 bars
                 targetBars = 3;
             }
-        } else if (connectionType == NetworkConnectionTypeWiFi ||
-                  (connectionType == NetworkConnectionTypeAuto && shouldUseWiFiForAutoMode())) {
+        } else if (connectionType == NetworkConnectionTypeWiFi) {
             // For WiFi mode, have slightly weaker cellular (1-4 bars, realistic for indoor WiFi scenarios)
             int signalBase = arc4random_uniform(100);
             if (signalBase < 20) {
@@ -333,9 +303,6 @@ static NSString *getCurrentCellularNetworkType() {
 static Boolean (*original_SCNetworkReachabilityGetFlags)(SCNetworkReachabilityRef target, SCNetworkReachabilityFlags *flags);
 
 Boolean hooked_SCNetworkReachabilityGetFlags(SCNetworkReachabilityRef target, SCNetworkReachabilityFlags *flags) {
-    if (shouldShowAsWiFi()) {
-        return original_SCNetworkReachabilityGetFlags(target, flags);
-    }
     Boolean result = original_SCNetworkReachabilityGetFlags(target, flags);
     if (!result || !flags) {
         return result;
@@ -360,36 +327,31 @@ Boolean hooked_SCNetworkReachabilityGetFlags(SCNetworkReachabilityRef target, SC
 // Hook for CTTelephonyNetworkInfo
 %hook CTTelephonyNetworkInfo
 
-- (NSDictionary<NSString *, CTCarrier *> *)serviceSubscriberCellularProviders {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    }
-    
-    NSDictionary<NSString *, CTCarrier *> *origDict = %orig;
-    return origDict;
-}
+- (NSDictionary *)serviceSubscriberCellularProviders {
 
-- (CTCarrier *)subscriberCellularProvider {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    }
-    
-    return %orig;
+    NetworkInfo * networkInfo = CurrentPhoneInfo().networkInfo;
+    CTCarrier *carrier = [[CTCarrier alloc] init];
+
+    [carrier setValue:networkInfo.mcc forKey:@"mobileCountryCode"];
+    [carrier setValue:networkInfo.mnc forKey:@"mobileNetworkCode"];
+    [carrier setValue:networkInfo.carrierName forKey:@"carrierName"];
+    [carrier setValue:networkInfo.countryCode forKey:@"isoCountryCode"];
+
+    return @{
+        @"0000000100000001" : carrier
+    };
 }
 
 - (NSString *)currentRadioAccessTechnology {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    } else if (shouldShowAsCellular()) {
-        return getCurrentCellularNetworkType();
-    }
-    return %orig;
+    // if (shouldShowAsCellular()) {
+    //     return getCurrentCellularNetworkType();
+    // }
+    // return %orig;
+    return CTRadioAccessTechnologyLTE;
 }
 
 - (NSDictionary<NSString *, NSString *> *)serviceCurrentRadioAccessTechnology {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    } else if (shouldShowAsCellular()) {
+    if (shouldShowAsCellular()) {
         return @{ @"0": getCurrentCellularNetworkType() };
     }
     return %orig;
@@ -401,36 +363,28 @@ Boolean hooked_SCNetworkReachabilityGetFlags(SCNetworkReachabilityRef target, SC
 %hook CTCarrier
 
 - (NSString *)carrierName {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    } else if (shouldShowAsCellular()) {
+    if (shouldShowAsCellular()) {
         return CurrentPhoneInfo().networkInfo.carrierName;
     }
     return %orig;
 }
 
 - (NSString *)mobileCountryCode {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    } else if (shouldShowAsCellular()) {
-        return CurrentPhoneInfo().networkInfo.mnc;
+    if (shouldShowAsCellular()) {
+        return CurrentPhoneInfo().networkInfo.mcc;
     }
     return %orig;
 }
 
 - (NSString *)mobileNetworkCode {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    } else if (shouldShowAsCellular()) {
+    if (shouldShowAsCellular()) {
         return CurrentPhoneInfo().networkInfo.mnc;
     }
     return %orig;
 }
 
 - (NSString *)isoCountryCode {
-    if (shouldShowAsWiFi()) {
-        return %orig;
-    } else if (shouldShowAsCellular()) {
+    if (shouldShowAsCellular()) {
         return getCurrentISOCountryCode();
     }
     return %orig;
@@ -477,98 +431,70 @@ Boolean hooked_SCNetworkReachabilityGetFlags(SCNetworkReachabilityRef target, SC
 // Enable getifaddrs hook for local IP spoofing
 static int (*original_getifaddrs)(struct ifaddrs **);
 static int hooked_getifaddrs(struct ifaddrs **ifap) {
-    NSLog(@"[NetworkHook] hooked_getifaddrs");
+    // 调用原始函数获取真实的接口列表
     int result = original_getifaddrs(ifap);
-    if (result == 0 && ifap && *ifap) {
-        struct ifaddrs *ifa = *ifap;
-        NetworkInfo * networkInfo = CurrentPhoneInfo().networkInfo;
-        NetworkConnectionType type = networkInfo.connectionType;
-        NSString *spoofedIP = networkInfo.localIPAddress;
-        NSString *spoofedIPv6 = networkInfo.localIPv6Address;
+    
+    // 如果获取失败或者返回列表为空，直接返回结果
+    if (result != 0 || ifap == NULL || *ifap == NULL) {
+        return result;
+    }
 
-        if (!spoofedIPv6) {
-            spoofedIPv6 = @"fe80::1234:abcd:5678:9abc";
+    NetworkInfo *networkInfo = CurrentPhoneInfo().networkInfo;
+    NetworkConnectionType type = networkInfo.connectionType;
+    NSString *spoofedIP = networkInfo.localIPAddress;
+    NSString *spoofedIPv6 = networkInfo.localIPv6Address;
+
+    struct ifaddrs *ifa = *ifap;
+    while (ifa) {
+        if (ifa->ifa_addr == NULL) {
+            ifa = ifa->ifa_next;
+            continue;
         }
-        // Generate plausible carrier IPv4/IPv6 for pdp_ip0
-        NSString *carrierIPv4 = @"10.0.0.5";
-        NSString *carrierIPv6 = @"2607:f8b0:4005:805::200e"; // Example global IPv6
-        while (ifa) {
-            if (ifa->ifa_addr) {
-                if (ifa->ifa_addr->sa_family == AF_INET) {
-                        struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
 
-                        char before[INET_ADDRSTRLEN];
-                        inet_ntop(AF_INET, &sin->sin_addr, before, sizeof(before));
+        const char *name = ifa->ifa_name;
+        uint16_t family = ifa->ifa_addr->sa_family;
 
-                        NSLog(@"[HOOK] BEFORE IPv4 %s -> %s", ifa->ifa_name, before);
-                    if (type == NetworkConnectionTypeWiFi || (type == NetworkConnectionTypeAuto && shouldUseWiFiForAutoMode())) {
-                        if (strcmp(ifa->ifa_name, "en0") == 0 && spoofedIP) {
-                            struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
-                            sin->sin_addr.s_addr = inet_addr([spoofedIP UTF8String]);
-                        }
-                        // Optionally, clear pdp_ip0
-                        if (strcmp(ifa->ifa_name, "pdp_ip0") == 0) {
-                            struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
-                            sin->sin_addr.s_addr = 0;
-                        }
-                    } else if (type == NetworkConnectionTypeCellular || (type == NetworkConnectionTypeAuto && !shouldUseWiFiForAutoMode())) {
-                        if (strcmp(ifa->ifa_name, "pdp_ip0") == 0 && carrierIPv4) {
-                            struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
-                            sin->sin_addr.s_addr = inet_addr([carrierIPv4 UTF8String]);
-                        }
-                        // Optionally, clear en0
-                        if (strcmp(ifa->ifa_name, "en0") == 0) {
-                            struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
-                            sin->sin_addr.s_addr = 0;
-                        }
+        // --- 处理 IPv4 逻辑 ---
+        if (family == AF_INET) {
+            struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
+            
+            if (type == NetworkConnectionTypeWiFi && strcmp(name, "en0") == 0) {
+                if (spoofedIP && spoofedIP.length > 0) {
+                    sin->sin_addr.s_addr = inet_addr([spoofedIP UTF8String]);
+                    // 配合 WiFi 环境，通常将掩码设为 255.255.255.0
+                    if (ifa->ifa_netmask) {
+                        ((struct sockaddr_in *)ifa->ifa_netmask)->sin_addr.s_addr = inet_addr("255.255.255.0");
                     }
-
-                    
-                    // 修改完后再打印
-                    char after[INET_ADDRSTRLEN];
-                    inet_ntop(AF_INET, &sin->sin_addr, after, sizeof(after));
-
-                    NSLog(@"[HOOK] AFTER  IPv4 %s -> %s", ifa->ifa_name, after);
-                } else if (ifa->ifa_addr->sa_family == AF_INET6) {
-                    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-
-                    char before6[INET6_ADDRSTRLEN];
-                    inet_ntop(AF_INET6, &sin6->sin6_addr, before6, sizeof(before6));
-
-                    NSLog(@"[HOOK] BEFORE IPv6 %s -> %s (scope=%d)",
-                        ifa->ifa_name, before6, sin6->sin6_scope_id);
-           
-                    if (type == NetworkConnectionTypeWiFi || (type == NetworkConnectionTypeAuto && shouldUseWiFiForAutoMode())) {
-                        if (strcmp(ifa->ifa_name, "en0") == 0 && spoofedIPv6) {
-                            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-                            inet_pton(AF_INET6, [spoofedIPv6 UTF8String], &sin6->sin6_addr);
-                        }
-                        // Optionally, clear pdp_ip0
-                        if (strcmp(ifa->ifa_name, "pdp_ip0") == 0) {
-                            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-                            memset(&sin6->sin6_addr, 0, sizeof(sin6->sin6_addr));
-                        }
-                    } else if (type == NetworkConnectionTypeCellular || (type == NetworkConnectionTypeAuto && !shouldUseWiFiForAutoMode())) {
-                        if (strcmp(ifa->ifa_name, "pdp_ip0") == 0 && carrierIPv6) {
-                            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-                            inet_pton(AF_INET6, [carrierIPv6 UTF8String], &sin6->sin6_addr);
-                        }
-                        // Optionally, clear en0
-                        if (strcmp(ifa->ifa_name, "en0") == 0) {
-                            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-                            memset(&sin6->sin6_addr, 0, sizeof(sin6->sin6_addr));
-                        }
+                }
+            } 
+            else if (type == NetworkConnectionTypeCellular && strcmp(name, "pdp_ip0") == 0) {
+                if (spoofedIP && spoofedIP.length > 0) {
+                    sin->sin_addr.s_addr = inet_addr([spoofedIP UTF8String]);
+                    // 蜂窝网掩码通常是 255.255.255.255
+                    if (ifa->ifa_netmask) {
+                        ((struct sockaddr_in *)ifa->ifa_netmask)->sin_addr.s_addr = inet_addr("255.255.255.255");
                     }
-                    char after6[INET6_ADDRSTRLEN];
-                    inet_ntop(AF_INET6, &sin6->sin6_addr, after6, sizeof(after6));
-
-                    NSLog(@"[HOOK] AFTER  IPv6 %s -> %s (scope=%d)",
-                    ifa->ifa_name, after6, sin6->sin6_scope_id);
                 }
             }
-            ifa = ifa->ifa_next;
         }
+        
+        // --- 处理 IPv6 逻辑 ---
+        else if (family == AF_INET6) {
+            struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+            
+            BOOL isWiFiTarget = (type == NetworkConnectionTypeWiFi && strcmp(name, "en0") == 0);
+            BOOL isCellularTarget = (type == NetworkConnectionTypeCellular && strcmp(name, "pdp_ip0") == 0);
+            
+            if (isWiFiTarget || isCellularTarget) {
+                NSString *targetIPv6 = spoofedIPv6 ? spoofedIPv6 : @"fe80::1234:abcd:5678:9abc";
+                inet_pton(AF_INET6, [targetIPv6 UTF8String], &sin6->sin6_addr);
+                // IPv6 掩码通常保持系统默认，不做强制修改以防结构破坏
+            }
+        }
+
+        ifa = ifa->ifa_next;
     }
+
     return result;
 }
 
@@ -696,7 +622,6 @@ static CFDictionaryRef hooked_CNCopyCurrentNetworkInfo(CFStringRef interfaceName
         // Setup the SCNetworkReachabilityGetFlags hook
         void *SCNetworkReachabilityGetFlagsPtr = dlsym(RTLD_DEFAULT, "SCNetworkReachabilityGetFlags");
         if (SCNetworkReachabilityGetFlagsPtr) {
-            // Use ElleKit for hooking (preferred for iOS 15+)
             MSHookFunction(SCNetworkReachabilityGetFlagsPtr, 
                     (void *)hooked_SCNetworkReachabilityGetFlags, 
                     (void **)&original_SCNetworkReachabilityGetFlags);
@@ -720,36 +645,15 @@ static CFDictionaryRef hooked_CNCopyCurrentNetworkInfo(CFStringRef interfaceName
         if (initialType != -1) {
             NSString *connectionName;
             switch (initialType) {
-                case NetworkConnectionTypeNone:
-                    connectionName = @"None";
-                    break;
                 case NetworkConnectionTypeWiFi:
                     connectionName = @"WiFi";
                     break;
                 case NetworkConnectionTypeCellular:
                     connectionName = @"Cellular";
                     break;
-                case NetworkConnectionTypeAuto:
-                    connectionName = @"Auto";
-                    break;
                 default:
                     connectionName = @"Unknown";
                     break;
-            }
-            
-            if (initialType == NetworkConnectionTypeWiFi || 
-                (initialType == NetworkConnectionTypeAuto && shouldUseWiFiForAutoMode())) {
-                NSString *localIP = networkInfo.localIPAddress;
-                PXLog(@"[NetworkHook] Network connection type spoofing enabled with type: %@ (Local IP: %@) for scoped app", 
-                        connectionName, localIP);
-            } else if (initialType == NetworkConnectionTypeCellular ||
-                        (initialType == NetworkConnectionTypeAuto && !shouldUseWiFiForAutoMode())) {
-                NSString *isoCode = getCurrentISOCountryCode();
-                PXLog(@"[NetworkHook] Network connection type spoofing enabled with type: %@ (ISO: %@) for scoped app", 
-                        connectionName, isoCode);
-            } else {
-                PXLog(@"[NetworkHook] Network connection type spoofing enabled with type: %@ for scoped app", 
-                        connectionName);
             }
         } else {
             PXLog(@"[NetworkHook] Network connection type spoofing disabled");

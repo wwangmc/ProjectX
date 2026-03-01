@@ -517,7 +517,8 @@
         @"mnc": self.mnc ?: @"",
         @"localIPv6Address": self.localIPv6Address ?: @"",
         @"localIPAddress": self.localIPAddress ?: @"",
-        @"connectionType": @(self.connectionType)
+        @"connectionType": @(self.connectionType),
+        @"countryCode": self.countryCode ?: @""
     };
 }
 + (instancetype)fromDictionary:(NSDictionary *)dict{
@@ -527,6 +528,7 @@
     networkInfo.mnc = dict[@"mnc"] ?: @"";
     networkInfo.localIPv6Address = dict[@"localIPv6Address"] ?: @"";
     networkInfo.localIPAddress = dict[@"localIPAddress"] ?: @"";
+    networkInfo.countryCode = dict[@"countryCode"] ?: @"";
     id connectionTypeObj = dict[@"connectionType"];
     if ([connectionTypeObj isKindOfClass:[NSNumber class]]) {
         networkInfo.connectionType = [connectionTypeObj integerValue];

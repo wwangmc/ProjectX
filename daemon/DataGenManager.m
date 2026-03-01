@@ -685,10 +685,11 @@
     networkInfo.carrierName = carrier[@"name"];
     networkInfo.mcc = carrier[@"mcc"];
     networkInfo.mnc = carrier[@"mnc"];
+    networkInfo.countryCode  = carrier[@"code"];
     networkInfo.localIPAddress = [self generateSpoofedLocalIPAddressFromCurrent];
     networkInfo.localIPv6Address = [self generateSpoofedLocalIPv6AddressFromCurrent];
     // 获取最小值和最大值
-    NetworkConnectionType minType = NetworkConnectionTypeAuto;    // 0
+    NetworkConnectionType minType = NetworkConnectionTypeWiFi;    // 1
     NetworkConnectionType maxType = NetworkConnectionTypeCellular;    // 2
 
     // 生成随机数（包含 min 和 max）

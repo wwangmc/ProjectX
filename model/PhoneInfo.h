@@ -148,6 +148,7 @@ typedef NS_ENUM(NSInteger, NetworkConnectionType) {
 @property (nonatomic, copy) NSString *mnc;
 @property (nonatomic, copy) NSString *localIPv6Address;
 @property (nonatomic, copy) NSString *localIPAddress;
+@property (nonatomic, copy) NSString *countryCode;
 // 0~3
 @property (nonatomic, assign) NetworkConnectionType connectionType;
 
