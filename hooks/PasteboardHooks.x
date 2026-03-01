@@ -2,13 +2,9 @@
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import "ProjectXLogging.h"
-<<<<<<<< HEAD:ProjectXTweak/PasteboardHooks.x
-#import "PasteboardUUIDManager.h"
-// #import <ellekit/ellekit.h>
-========
 #import "ProfileManager.h"
 #import "DataManager.h"
->>>>>>>> refs/heads/once:hooks/PasteboardHooks.x
+
 
 
 static NSMutableDictionary *customChangeCountMap = nil; // Store custom change counts per app
