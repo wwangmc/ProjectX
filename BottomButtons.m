@@ -1,10 +1,9 @@
 #import "BottomButtons.h"
-#import "ProjectX.h"
-#import "IdentifierManager.h"
 #import <spawn.h>
 #import <sys/wait.h>
 #import <objc/runtime.h>
-
+#import "LoadingView.h"
+#import "DaemonApiManager.h"
 @interface SBSRelaunchAction : NSObject
 + (id)actionWithReason:(id)arg1 options:(unsigned)arg2 targetURL:(id)arg3;
 @end
@@ -15,7 +14,6 @@
 @end
 
 @interface BottomButtons ()
-@property (nonatomic, strong) IdentifierManager *manager;
 @end
 
 @implementation BottomButtons
@@ -30,19 +28,13 @@
 }
 
 - (instancetype)init {
-    if (self = [super init]) {
-        _manager = [IdentifierManager sharedManager];
-    }
+
     return self;
 }
 
 #pragma mark - App Termination
 
 - (void)killAppViaExecutableName:(NSString *)bundleID {
-    if (![self.manager isApplicationEnabled:bundleID]) {
-        NSLog(@"[BottomButtons] Skipping kill for disabled app: %@", bundleID);
-        return;
-    }
     
     // Generate haptic feedback
     UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
@@ -224,23 +216,23 @@
     [containerView addSubview:buttonStackView];
     
     // Create kill button with soft minimalistic style
-    UIButton *killButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    UIButtonConfiguration *killConfig = [UIButtonConfiguration plainButtonConfiguration];
-    killConfig.title = @"Kill Enabled Apps";
-    killConfig.cornerStyle = UIButtonConfigurationCornerStyleMedium;
-    killConfig.background.backgroundColor = [UIColor.systemRedColor colorWithAlphaComponent:0.15];
-    killConfig.baseForegroundColor = [UIColor systemRedColor];
-    killConfig.contentInsets = NSDirectionalEdgeInsetsMake(6, 8, 6, 8);
-    killButton.configuration = killConfig;
-    [killButton addTarget:self action:@selector(killEnabledApps) forControlEvents:UIControlEventTouchUpInside];
-    killButton.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
-    killButton.layer.cornerRadius = 10;
-    killButton.clipsToBounds = YES;
+    UIButton *newPhoneButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIButtonConfiguration *newPhoneBtnConfig = [UIButtonConfiguration plainButtonConfiguration];
+    newPhoneBtnConfig.title = @"一键新机";
+    newPhoneBtnConfig.cornerStyle = UIButtonConfigurationCornerStyleMedium;
+    newPhoneBtnConfig.background.backgroundColor = [UIColor.systemGreenColor colorWithAlphaComponent:0.15];
+    newPhoneBtnConfig.baseForegroundColor = [UIColor systemGreenColor];
+    newPhoneBtnConfig.contentInsets = NSDirectionalEdgeInsetsMake(6, 8, 6, 8);
+    newPhoneButton.configuration = newPhoneBtnConfig;
+    [newPhoneButton addTarget:self action:@selector(newPhoneTap) forControlEvents:UIControlEventTouchUpInside];
+    newPhoneButton.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+    newPhoneButton.layer.cornerRadius = 10;
+    newPhoneButton.clipsToBounds = YES;
     
     // Create respring button with soft minimalistic style
     UIButton *applyButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIButtonConfiguration *applyConfig = [UIButtonConfiguration plainButtonConfiguration];
-    applyConfig.title = @"Respring";
+    applyConfig.title = @"注销";
     applyConfig.cornerStyle = UIButtonConfigurationCornerStyleMedium;
     applyConfig.background.backgroundColor = [UIColor.systemBlueColor colorWithAlphaComponent:0.15];
     applyConfig.baseForegroundColor = [UIColor systemBlueColor];
@@ -252,7 +244,7 @@
     applyButton.clipsToBounds = YES;
     
     // Add buttons to stack view
-    [buttonStackView addArrangedSubview:killButton];
+    [buttonStackView addArrangedSubview:newPhoneButton];
     [buttonStackView addArrangedSubview:applyButton];
     
     // Setup constraints
@@ -296,7 +288,27 @@
     
     [topController presentViewController:alert animated:YES completion:nil];
 }
-
+- (void)newPhoneTap {
+    // 显示在窗口上
+    [[LoadingView sharedInstance] showWithMessage:@"正在处理..."];
+    
+    // 延时关闭
+     [[DaemonApiManager sharedManager] newPhone:^(id response, NSError *error) {
+        // 回到主线程关闭加载框
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[LoadingView sharedInstance] hide];
+            
+            // 处理结果 可改为弹窗
+            // if (error) {
+            //     NSLog(@"请求失败: %@", error);
+            //     [self showErrorMessage:error.localizedDescription];
+            // } else {
+            //     NSLog(@"请求成功: %@", response);
+            //     [self handleSuccessResponse:response];
+            // }
+        });
+    }];
+}
 - (void)performRespring {
     NSLog(@"[BottomButtons] 🔄 Attempting to respring device");
     
@@ -506,56 +518,5 @@
     return topController;
 }
 
-#pragma mark - App Management
-
-- (void)killEnabledApps {
-    // Get all enabled apps
-    NSDictionary *allApps = [self.manager getApplicationInfo:nil];
-    NSMutableArray *actions = [NSMutableArray array];
-    
-    // Create a safelist of apps that should NEVER be terminated
-    NSArray *safeApps = @[
-        @"com.hydra.projectx",      // The tweak itself
-        @"com.apple.springboard",   // SpringBoard
-        @"com.apple.backboardd",    // BackBoard
-        @"com.apple.preferences",   // Settings
-        @"com.apple.mobilephone",   // Phone
-        @"com.apple.MobileSMS"      // Messages
-    ];
-    
-    for (NSString *bundleID in allApps) {
-        // Skip apps in the safelist
-        if ([safeApps containsObject:bundleID]) {
-            NSLog(@"[BottomButtons] 🛡️ Skipping termination of protected app: %@", bundleID);
-            continue;
-        }
-        
-        if ([self.manager isApplicationEnabled:bundleID]) {
-            // Try to terminate using terminateApplicationWithBundleID first
-            [self terminateApplicationWithBundleID:bundleID];
-            
-            // Create SBSRelaunchAction as additional measure
-            @try {
-                SBSRelaunchAction *action = [SBSRelaunchAction actionWithReason:@"terminate" options:4 targetURL:[NSURL URLWithString:[NSString stringWithFormat:@"com.apple.frontboard.systemappservices://%@", bundleID]]];
-                [actions addObject:action];
-            } @catch (NSException *exception) {
-                NSLog(@"[BottomButtons] Failed to create SBSRelaunchAction for %@: %@", bundleID, exception);
-            }
-            
-            // Try killing via executable name as final fallback
-            [self killAppViaExecutableName:bundleID];
-        }
-    }
-    
-    // Send relaunch actions
-    if (actions.count > 0) {
-        @try {
-            [[FBSSystemService sharedService] sendActions:[NSSet setWithArray:actions] withResult:nil];
-            NSLog(@"[BottomButtons] Successfully sent termination actions for %lu apps", (unsigned long)actions.count);
-        } @catch (NSException *exception) {
-            NSLog(@"[BottomButtons] Failed to send termination actions: %@", exception);
-        }
-    }
-}
 
 @end

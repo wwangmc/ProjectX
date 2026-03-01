@@ -3,7 +3,7 @@ Name: Project X
 Version: 2.5.1
 Architecture: iphoneos-arm64
 Description: Spoof device identifiers and bypass security. For rootless jailbreak iOS 15+ devices.
-Depends: firmware (>= 12.0), ellekit (>= 0.5)
+Depends: firmware (>= 12.0), mobilesubstrate
 Maintainer: HYDRA
 Author: HYDRA
 Section: System

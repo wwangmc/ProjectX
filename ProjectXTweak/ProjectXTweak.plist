@@ -6,16 +6,8 @@
 	<dict>
 		<key>Bundles</key>
 		<array>
-			<string>com.apple.UIKit</string>
-		</array>
-		<key>Executables</key>
-		<array>
-			<string>SpringBoard</string>
-		</array>
-		<key>Mode</key>
-		<string>Any</string>
+			<string>io.idb.deviceinfo</string>
+		</array>	
 	</dict>
-	<key>ElleKit</key>
-	<true/>
 </dict>
-</plist> 
+</plist>
